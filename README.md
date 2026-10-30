@@ -260,19 +260,49 @@ Virtual_Exam_System_Proposal_Latest.md   the proposal this was built from
 
 ## Configuration
 
-Environment variables (optional):
+Key environment variables (all optional):
 
-- `EXAM_SECRET_KEY` — session signing key (random per start if unset;
-  set it in production so restarts do not log everyone out)
-- `EXAM_AI_MOCK=1` / `EXAM_AI_INLINE=1` — AI pipeline modes (above)
-- `instance/ai_config.json` — AI model names; created with the defaults on
-  first run, edit it and restart to swap models (env vars still win)
+- `SECRET_KEY` — session signing (randomised on first run if absent)
+- `SQLALCHEMY_DATABASE_URI` — defaults to `sqlite:///instance/exams.db`
+- `SNAPSHOT_DIR`, `UPLOAD_DIR`, `PROFILE_DIR` — media folders (created in
+  `instance/` by default)
+- `SNAPSHOT_RETENTION_DAYS` — default 7; `flask cleanup-snapshots` purges
+  expired photos
 - `EXAM_PDF_FONT` — path to a Unicode TTF for the PDF export
   (Arial/DejaVu are auto-detected; the export degrades gracefully without)
-- Snapshot retention: `SNAPSHOT_RETENTION_DAYS` (default 7) — expired photos
-  are deleted at startup; run `flask --app run cleanup-snapshots` any time
+- AI model names; created with the defaults on
+  first run, edit it and restart to swap models (env vars still win)
 
-## Honest limitations
+### Tests
+
+```bash
+pip install pytest
+python -m pytest tests/ -q      # 66 tests: flows, anti-cheat, grading, chain,
+                                # CSV, PDF, AI marking, collusion, seed data,
+                                # discrimination, timer expiry, duplication
+python smoke_test.py            # 9 end-to-end checks against a running server
+python -m flask --app run verify-chains   # recompute every evidence chain
+```
+
+### Project layout
+
+```
+app/                    Flask package (blueprints, models, services, AI)
+app/ai/                 AI pipeline (OCR, RAG, marking, background jobs)
+app/routes/             blueprints: auth, admin, teacher, student, API
+app/templates/          Jinja2 templates
+app/static/             CSS / JS (exam.js, monitor.js, question-form.js)
+instance/               generated: database, ai_config.json, media folders
+tests/                  pytest suite (test_app.py, test_improvements.py)
+run.py                  entry point
+requirements.txt        core deps (Flask, SQLAlchemy, Pillow, fpdf2, PyMuPDF)
+requirements-ai.txt     optional AI extras
+smoke_test.py           9 live checks against a running server
+plan.md                 detailed project plan
+README.md               this file
+```
+
+### Honest limitations
 
 Browser-based proctoring can discourage and document cheating, not prevent it:
 a second phone, a person nearby, or a virtual machine are outside the
