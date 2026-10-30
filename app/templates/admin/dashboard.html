@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Admin · Virtual Exam System{% endblock %}
+
+{% block content %}
+<h1>Admin dashboard</h1>
+
+<div class="actions-row">
+  <a class="btn" href="{{ url_for('admin.settings') }}">⚙ Anti-cheat settings</a>
+  <a class="btn" href="{{ url_for('admin.audit_log') }}">📒 Audit log</a>
+  <a class="btn" href="{{ url_for('admin.backup') }}">💾 Download database backup</a>
+</div>
+
+<div class="summary-grid">
+  <div class="card summary-card">
+    <span class="summary-label">Users</span><span class="summary-value">{{ stats.users }}</span>
+  </div>
+  <div class="card summary-card">
+    <span class="summary-label">Exams</span><span class="summary-value">{{ stats.exams }}</span>
+  </div>
+  <div class="card summary-card">
+    <span class="summary-label">Attempts</span><span class="summary-value">{{ stats.attempts }}</span>
+  </div>
+  <div class="card summary-card">
+    <span class="summary-label">Running now</span><span class="summary-value">{{ stats.in_progress }}</span>
+  </div>
+</div>
+
+<div class="two-col">
+  <section class="card">
+    <h2>Create user</h2>
+    <form method="post" action="{{ url_for('admin.user_new') }}" class="stack">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>Username *
+        <input type="text" name="username" required
+               pattern="[A-Za-z0-9_\-]+" title="letters, numbers, _ and -">
+      </label>
+      <label>Full name
+        <input type="text" name="full_name">
+      </label>
+      <label>Role
+        <select name="role">
+          {% for r in roles %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Password * (min 6 chars)
+        <input type="password" name="password" required minlength="6">
+      </label>
+      <button class="btn btn-primary" type="submit">Create user</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Users ({{ users|length }})</h2>
+    <table class="table">
+      <thead><tr><th>User</th><th>Role</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>
+            <strong>{{ u.username }}</strong>
+            <span class="muted small">{{ u.display_name }}</span>
+          </td>
+          <td>
+            <form method="post" action="{{ url_for('admin.user_role', user_id=u.id) }}"
+                  class="inline-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <select name="role" onchange="this.form.submit()">
+                {% for r in roles %}
+                  <option value="{{ r }}" {{ 'selected' if u.role == r }}>{{ r }}</option>
+                {% endfor %}
+              </select>
+            </form>
+          </td>
+          <td class="action-cell">
+            <div class="mini-actions">
+              <form method="post" action="{{ url_for('admin.user_password', user_id=u.id) }}"
+                    class="inline-form"
+                    onsubmit="return confirm('Reset password for {{ u.username }}?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="password" name="password" placeholder="new password"
+                       minlength="6" required>
+                <button class="btn btn-sm" type="submit">Reset</button>
+              </form>
+              <form method="post" action="{{ url_for('admin.user_delete', user_id=u.id) }}"
+                    class="inline-form"
+                    onsubmit="return confirm('Delete {{ u.username }}?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="btn btn-sm btn-danger" type="submit">✕</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<div class="card">
+  <h2>All exams</h2>
+  {% if not exams %}
+    <p class="muted">No exams yet.</p>
+  {% else %}
+  <table class="table">
+    <thead><tr><th>Title</th><th>Owner</th><th>Status</th><th>Questions</th><th>Attempts</th><th></th></tr></thead>
+    <tbody>
+      {% for e in exams %}
+      <tr>
+        <td>{{ e.title }}</td>
+        <td>{{ e.creator.display_name if e.creator else '—' }}</td>
+        <td><span class="badge badge-{{ e.status_label }}">{{ e.status_label|label }}</span></td>
+        <td>{{ e.questions|length }}</td>
+        <td>{{ e.attempts|length }}</td>
+        <td>
+          <a href="{{ url_for('teacher.exam_results', exam_id=e.id) }}">results</a> ·
+          <a href="{{ url_for('teacher.exam_monitor', exam_id=e.id) }}">live</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

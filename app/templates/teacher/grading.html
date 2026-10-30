@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}AI marking · {{ attempt.student.display_name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>AI marking — {{ attempt.student.display_name }}</h1>
+  <div>
+    <a class="btn" href="{{ url_for('teacher.attempt_report', attempt_id=attempt.id) }}">Cheat report</a>
+    <a class="btn" href="{{ url_for('teacher.exam_results', exam_id=attempt.exam_id) }}">← Results</a>
+  </div>
+</div>
+
+<p class="muted">The AI only <strong>suggests</strong> marks. Nothing counts
+   until you approve it here — approved marks are re-graded into the score
+   immediately. Low-confidence suggestions are highlighted.</p>
+
+{% if not rows %}
+<div class="card">
+  <p class="muted">No typed answers in this attempt — nothing to review.</p>
+</div>
+{% endif %}
+
+{% for row in rows %}
+{% set q = row.question %}
+{% set gr = row.grading %}
+<div class="card grading-card">
+  <div class="grading-grid">
+    <section>
+      <h3>#{{ loop.index }} · {{ q.text }}</h3>
+      <p class="muted small">{{ q.label }} · max {{ q.points|marks }} pt</p>
+      <div class="student-answer">
+        <strong>Student answer:</strong>
+        {% if row.answer and row.answer.response %}
+          <pre class="typed-answer">{{ row.answer.response }}</pre>
+        {% else %}
+          <p class="muted">(blank)</p>
+        {% endif %}
+      </div>
+      {% if q.model_answer %}
+        <p class="muted small"><strong>Model answer:</strong> {{ q.model_answer }}</p>
+      {% endif %}
+      {% if q.rubric %}
+        <details>
+          <summary>Rubric ({{ q.rubric.splitlines()|length }} points)</summary>
+          <pre class="typed-answer">{{ q.rubric }}</pre>
+        </details>
+      {% endif %}
+    </section>
+
+    <section>
+      {% if gr %}
+        <h3>
+          Suggestion:
+          <strong>{{ gr.suggested_marks|marks }}/{{ q.points|marks }}</strong>
+          <span class="badge {{ 'badge-risk-high' if (gr.confidence is not none and gr.confidence < 0.5) else 'badge-risk-low' }}">
+            confidence {{ (gr.confidence * 100)|round|int if gr.confidence is not none else '?' }}%
+          </span>
+          <span class="badge">{{ gr.model_name or '?' }} {{ gr.prompt_version or '' }}</span>
+          <span class="badge badge-{{ 'open' if gr.status == 'approved' else ('risk-high' if gr.status == 'rejected' else 'medium') }}">
+            {{ gr.status|label }}
+          </span>
+        </h3>
+        {% if gr.reason %}<p class="muted">{{ gr.reason }}</p>{% endif %}
+        {% if gr.matched_points %}
+          <p class="muted small">✔ Matched:
+            {% for p in gr.matched_points %}<span class="badge badge-open">{{ p }}</span>{% endfor %}
+          </p>
+        {% endif %}
+        {% if gr.missing_points %}
+          <p class="muted small">✘ Missing:
+            {% for p in gr.missing_points %}<span class="badge badge-risk-high">{{ p }}</span>{% endfor %}
+          </p>
+        {% endif %}
+
+        {% if gr.status != 'approved' %}
+        <form method="post" class="form-row"
+              action="{{ url_for('teacher.grading_review', grading_id=gr.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <label class="grow">Final marks
+            <input type="number" name="marks" step="0.25" min="0" max="{{ q.points }}"
+                   value="{{ gr.suggested_marks if gr.suggested_marks is not none else 0 }}">
+          </label>
+          <button class="btn btn-primary" name="action" value="approve" type="submit">
+            ✔ Approve
+          </button>
+          <button class="btn btn-danger" name="action" value="reject" type="submit"
+                  onclick="return confirm('Reject the suggestion? You can set custom marks instead of the suggestion.');">
+            ✕ Reject (0 or custom)
+          </button>
+        </form>
+        {% elif gr.final_marks is not none %}
+        <p class="muted small">Approved {{ gr.final_marks|marks }}/{{ q.points|marks }}
+           by {{ gr.approved_by or '?' }}.</p>
+        {% endif %}
+      {% else %}
+        <p class="muted">No suggestion yet — the answer is auto-checked against
+           the model answer, or you can run the AI marking job.</p>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

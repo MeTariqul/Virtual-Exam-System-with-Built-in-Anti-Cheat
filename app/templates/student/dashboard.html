@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}My exams · Virtual Exam System{% endblock %}
+
+{% block content %}
+<h1>My exams</h1>
+
+{% if stats %}
+<div class="summary-grid">
+  <div class="card summary-card">
+    <span class="summary-label">Open now</span>
+    <span class="summary-value">{{ stats.open }}</span>
+  </div>
+  <div class="card summary-card">
+    <span class="summary-label">Finished</span>
+    <span class="summary-value">{{ stats.finished }}</span>
+  </div>
+  <div class="card summary-card">
+    <span class="summary-label">Average</span>
+    <span class="summary-value">{{ stats.average|pct if stats.average is not none else '—' }}{% if stats.average is not none %}%{% endif %}</span>
+  </div>
+  <div class="card summary-card">
+    <span class="summary-label">Passed</span>
+    <span class="summary-value">{{ stats.passed }}</span>
+  </div>
+</div>
+{% endif %}
+
+{% if not rows %}
+  <div class="card">
+    <p class="muted">No exams are open for you right now.</p>
+  </div>
+{% endif %}
+
+<div class="exam-grid">
+  {% for row in rows %}
+  <div class="card exam-card">
+    <div class="exam-card-head">
+      <h2>{{ row.exam.title }}</h2>
+      <span class="badge badge-{{ row.exam.status_label }}">{{ row.exam.status_label|label }}</span>
+    </div>
+    {% if row.exam.description %}
+      <p class="muted">{{ row.exam.description }}</p>
+    {% endif %}
+    <ul class="meta-list">
+      <li>⏱ {{ row.exam.duration_minutes }} minutes</li>
+      <li>❓ {{ row.exam.effective_pool_size }} question(s)</li>
+      <li>🚩 {{ row.exam.violation_limit }} warning limit</li>
+      <li>🎯 Pass mark {{ row.exam.pass_mark }}%</li>
+      {% if row.exam.attempts_allowed > 1 %}
+        <li>🔁 {{ row.finished }}/{{ row.exam.attempts_allowed }} attempt(s) used</li>
+      {% endif %}
+      {% if row.exam.access_code %}
+        <li>🔑 Access code required</li>
+      {% endif %}
+      {% if row.exam.scheduled_start or row.exam.scheduled_end %}
+        <li>🗓 {{ row.exam.scheduled_start|dt }} → {{ row.exam.scheduled_end|dt }}</li>
+      {% endif %}
+      {% if row.exam.webcam_enabled %}
+        <li>📷 Webcam snapshots enabled</li>
+      {% endif %}
+      {% if row.exam.require_fullscreen %}
+        <li>🖥 Fullscreen required</li>
+      {% endif %}
+      {% if row.exam.upload_window_minutes > 0 %}
+        <li>📄 Handwritten upload: {{ row.exam.upload_window_minutes }} min after submit</li>
+      {% endif %}
+    </ul>
+
+    {% if row.in_progress %}
+      <a class="btn btn-primary" href="{{ url_for('student.take_exam', attempt_id=row.attempt.id) }}">
+        ▶ Continue exam
+      </a>
+    {% elif row.upload_open %}
+      <a class="btn btn-primary" href="{{ url_for('student.result', attempt_id=row.attempt.id) }}">
+        📄 Upload handwritten answers
+      </a>
+    {% elif row.attempt and row.attempt.status == 'submitted' %}
+      {% if row.exam.show_result %}
+        <a class="btn" href="{{ url_for('student.result', attempt_id=row.attempt.id) }}">
+          View result —
+          {% if row.percent is not none %}{{ row.percent|pct }}%{% else %}pending review{% endif %}
+          {% if row.passed == true %} ✅{% elif row.passed == false %} ❌{% endif %}
+        </a>
+      {% else %}
+        <a class="btn" href="{{ url_for('student.result', attempt_id=row.attempt.id) }}">
+          View answers (result published later)
+        </a>
+      {% endif %}
+      {% if row.left > 0 %}
+        <form method="post" action="{{ url_for('student.start_exam', exam_id=row.exam.id) }}"
+              onsubmit="return confirm('Start attempt {{ row.finished + 1 }} of {{ row.exam.attempts_allowed }}? The timer begins immediately.');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          {% if row.exam.access_code %}
+            <label class="inline">Access code
+              <input type="text" name="access_code" required maxlength="12">
+            </label>
+          {% endif %}
+          <button class="btn btn-primary" type="submit">🔁 Start attempt {{ row.finished + 1 }}</button>
+        </form>
+      {% endif %}
+    {% elif row.can_start %}
+      <form method="post" action="{{ url_for('student.start_exam', exam_id=row.exam.id) }}"
+            onsubmit="return confirm('Start “{{ row.exam.title }}” now? The timer begins immediately.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        {% if row.exam.access_code %}
+          <label class="inline">Access code
+            <input type="text" name="access_code" required maxlength="12"
+                   placeholder="Ask your teacher">
+          </label>
+        {% endif %}
+        <button class="btn btn-primary" type="submit">▶ Start exam</button>
+      </form>
+    {% else %}
+      <p class="muted">No attempts left — ask your teacher.</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

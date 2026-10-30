@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Sign in · Virtual Exam System{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+{% block nav %}{% endblock %}
+
+{# New design system files, loaded after the legacy sheets so the
+   current page's cascade wins. Moved into base.html when the whole
+   app is migrated. #}
+{% block head %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-card">
+  <h1>Virtual Exam System</h1>
+  <p class="muted">Sign in to continue</p>
+
+  <form method="post" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="username">Username
+      <input id="username" type="text" name="username" autofocus required autocomplete="username">
+    </label>
+    <label for="password">Password
+      <input id="password" type="password" name="password" required autocomplete="current-password">
+    </label>
+    <button class="btn btn-primary" type="submit">Sign in</button>
+  </form>
+
+  <p class="muted center">New student?
+     <a href="{{ url_for('auth.register') }}">Create an account</a></p>
+
+  <div class="demo-hint">
+    <strong>Demo accounts</strong>
+    <code>admin / admin123</code>
+    <code>teacher / teacher123</code>
+    <code>teacher2 / teacher123</code>
+    <code>student / student123</code>
+    <code>student2 / student123</code>
+    <code>student3 / student123</code>
+  </div>
+</div>
+{% endblock %}

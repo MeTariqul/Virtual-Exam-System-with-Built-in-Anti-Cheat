@@ -1,0 +1,209 @@
+/* ============================================================
+   base.css — reset, typography, and the page shell
+   (top bar, nav, container, footer). Loaded after the legacy
+   style.css so equal-specificity rules here win.
+   ============================================================ */
+
+/* Native form controls and scrollbars follow the theme */
+:root { color-scheme: light; }
+html[data-theme="dark"] { color-scheme: dark; }
+
+/* ---------- reset ---------- */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--text);
+  /* Plain background — no gradients (design rule) */
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+/* Legacy dark mode paints gradient blobs on <body>; remove them */
+html[data-theme="dark"] body { background: var(--bg); }
+
+/* ---------- typography ---------- */
+h1 { font-size: 1.6rem; font-weight: 650; letter-spacing: -.02em; margin: .4rem 0 1rem; }
+h2 { font-size: 1.15rem; font-weight: 650; letter-spacing: -.01em; margin: 0 0 .8rem; }
+h3 { font-size: 1rem;   font-weight: 650; margin: 0 0 .5rem; }
+
+a { color: var(--primary); text-decoration: none; transition: color .14s; }
+a:hover { color: var(--primary-hover); }
+
+code, kbd, pre { font-family: var(--font-mono); font-size: .9em; }
+
+.muted { color: var(--text-muted); }
+.small { font-size: .85rem; }
+.center, .text-center { text-align: center; }
+.text-danger { color: var(--danger); }
+
+/* ---------- keyboard focus: visible everywhere ---------- */
+:is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---------- skip link (hidden until focused) ---------- */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: .6rem 1rem;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+}
+.skip-link:focus { left: .8rem; top: .8rem; }
+
+/* ---------- vertical rhythm helper ---------- */
+.stack { display: flex; flex-direction: column; gap: 1rem; }
+
+/* ---------- page container ---------- */
+.container {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 1.5rem 1.2rem 3rem;
+}
+
+/* ---------- top bar (solid surface, no glass) ---------- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+html[data-theme="dark"] .topbar { background: var(--surface); }
+
+.topbar-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  min-height: 60px;
+  padding: .5rem 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  font-weight: 650;
+  font-size: 1rem;
+  color: var(--text);
+  letter-spacing: -.01em;
+  white-space: nowrap;
+}
+.brand:hover { color: var(--text); }
+
+/* Brand icon: one line-icon set (Lucide paths, inlined) */
+.brand svg { width: 20px; height: 20px; stroke: var(--primary); }
+
+.topbar nav { display: flex; align-items: center; gap: .25rem; flex: 1; flex-wrap: wrap; }
+
+/* Nav links: plain pills, active = solid primary */
+.topbar nav a.nav-link {
+  padding: .4rem .8rem;
+  border-radius: var(--radius-control);
+  font-size: .92rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.topbar nav a.nav-link:hover { background: var(--surface-2); color: var(--text); }
+.topbar nav a.nav-link.is-active,
+.topbar nav a.nav-link.is-active:hover {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.topbar-right { display: flex; align-items: center; gap: .6rem; }
+
+/* User chip + avatar */
+.whoami {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: .9rem;
+  color: var(--text);
+  padding: .3rem .5rem;
+  border-radius: var(--radius-control);
+}
+.whoami:hover { background: var(--surface-2); color: var(--text); }
+html[data-theme="dark"] .whoami { background: transparent; }
+html[data-theme="dark"] .whoami:hover { background: var(--surface-2); }
+
+.avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+html[data-theme="dark"] .avatar { border-color: var(--border); }
+
+/* Icon-only buttons (theme toggle) */
+.icon-btn svg { width: 18px; height: 18px; stroke: currentColor; display: block; }
+
+/* ---------- flash messages (built-in alert states) ---------- */
+.flashes { margin-bottom: 1rem; display: flex; flex-direction: column; gap: .6rem; }
+.flash {
+  display: flex;
+  align-items: baseline;
+  gap: .6rem;
+  margin-bottom: 0; /* spacing comes from the .flashes gap */
+  padding: .7rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  font-size: .95rem;
+  font-weight: 500;
+}
+/* Legacy sheet injected ✅/⚠️ emoji here — text is enough */
+.flash::before,
+.flash-ok::before,
+.flash-error::before { content: none; }
+
+/* Tile pattern: default text colour, semantic border + light tint */
+.flash-ok { color: var(--text); border-color: var(--success); background: color-mix(in srgb, var(--success) 8%, var(--surface)); }
+.flash-error { color: var(--text); border-color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, var(--surface)); }
+html[data-theme="dark"] .flash-ok { color: var(--text); border-color: var(--success); background: color-mix(in srgb, var(--success) 12%, var(--surface)); }
+html[data-theme="dark"] .flash-error { color: var(--text); border-color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, var(--surface)); }
+
+/* ---------- footer ---------- */
+.site-footer {
+  border-top: 1px solid var(--border);
+  padding: 1rem 1.2rem;
+  text-align: center;
+  background: var(--surface);
+}
+.site-footer p { margin: 0; }
+
+/* ---------- loading state for submit buttons (replaces ⏳ emoji) ---------- */
+.btn.is-loading { position: relative; pointer-events: none; opacity: .75; }
+.btn.is-loading::after {
+  content: "";
+  width: 14px;
+  height: 14px;
+  margin-left: .5rem;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  display: inline-block;
+  vertical-align: -2px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- motion + print preferences ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

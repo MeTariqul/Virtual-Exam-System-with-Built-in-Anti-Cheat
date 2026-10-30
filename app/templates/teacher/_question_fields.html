@@ -1,0 +1,111 @@
+{# ----------------------------------------------------------------------
+   One question editor, three pages.
+
+   Used by  teacher/questions.html  (single question added to an exam),
+            teacher/bank_form.html   (standalone bank question),
+            teacher/exam_form.html   (inline blocks, prefixed ``q_0_`` …).
+
+   prefix     – prepended to every name/id: ``''`` gives name="text",
+                ``'q_0_'`` gives name="q_0_text" (the server strips it).
+   categories – Category rows for the category datalist.
+   values     – a plain dict of previously submitted values used to refill
+                the form after a validation error.  {} = blank form.
+   req        – add the browser-side ``required`` attribute to the question
+                text.  Inline blocks leave it off so a block the teacher
+                left completely empty can still be submitted and skipped.
+   #}
+{% macro fields(prefix, categories, values={}, req=false) %}
+{% set v = values if values else {} %}
+{% set t = v.get('type', 'mcq') or 'mcq' %}
+
+<label>Question type
+  <select name="{{ prefix }}type" data-qtype>
+    <option value="mcq" {{ 'selected' if t == 'mcq' else '' }}>Single answer (MCQ)</option>
+    <option value="multi" {{ 'selected' if t == 'multi' else '' }}>Multiple answers</option>
+    <option value="true_false" {{ 'selected' if t == 'true_false' else '' }}>True / False</option>
+    <option value="short_text" {{ 'selected' if t == 'short_text' else '' }}>Short text answer</option>
+    <option value="long_text" {{ 'selected' if t == 'long_text' else '' }}>Long text answer</option>
+  </select>
+</label>
+
+<label>Question text *
+  <textarea name="{{ prefix }}text" rows="2"
+            {{ 'required' if req else '' }}>{{ v.get('text', '') }}</textarea>
+</label>
+
+<div class="form-row">
+  <label>Points
+    <input type="number" name="{{ prefix }}points" min="1" max="100"
+           value="{{ v.get('points', 1) }}">
+  </label>
+  <label>Category (question bank)
+    <input type="text" name="{{ prefix }}category" list="{{ prefix }}category-list"
+           value="{{ v.get('category', '') }}"
+           placeholder="e.g. Networking" maxlength="80">
+    <datalist id="{{ prefix }}category-list">
+      {% for c in categories %}<option value="{{ c.name }}">{% endfor %}
+    </datalist>
+  </label>
+  <label>Difficulty
+    <select name="{{ prefix }}difficulty">
+      {% set d = v.get('difficulty') or '' %}
+      <option value="">—</option>
+      <option value="easy" {{ 'selected' if d == 'easy' else '' }}>easy</option>
+      <option value="medium" {{ 'selected' if d == 'medium' else '' }}>medium</option>
+      <option value="hard" {{ 'selected' if d == 'hard' else '' }}>hard</option>
+    </select>
+  </label>
+</div>
+
+<!-- MCQ / multi options -->
+<div data-for-type="mcq,multi">
+  {% set correct = v.get('correct') %}
+  {% for i in range(1, 5) %}
+  <label>Option {{ 'ABCD'[i - 1] }}
+    <div class="option-row">
+      <input type="radio" class="correct-picker"
+             name="{{ prefix }}correct" value="{{ i - 1 }}"
+             {{ 'checked' if correct == ((i - 1) | string) else '' }}
+             aria-label="Mark option {{ 'ABCD'[i - 1] }} correct">
+      <input type="text" name="{{ prefix }}option{{ i }}"
+             value="{{ v.get('option' ~ i, '') }}"
+             placeholder="Option {{ 'ABCD'[i - 1] }}{{ '' if i < 3 else ' (optional)' }}">
+    </div>
+  </label>
+  {% endfor %}
+  <p class="muted small" data-for-type="mcq">Pick the radio button next to the
+     correct option. At least two options must be filled.</p>
+  <p class="muted small" data-for-type="multi" hidden>
+    Tick EVERY correct option (at least two).</p>
+  <div class="multi-correct" data-for-type="multi" hidden>
+    {% for i in range(1, 5) %}
+    <label class="check">
+      <input type="checkbox" name="{{ prefix }}correct{{ i - 1 }}"
+             {{ 'checked' if v.get('correct' ~ (i - 1)) else '' }}>
+      Option {{ 'ABCD'[i - 1] }} is correct
+    </label>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- True/False -->
+<div data-for-type="true_false" hidden>
+  <label>Correct answer
+    <select name="{{ prefix }}tf_correct">
+      {% set tf = v.get('tf_correct', 'true') or 'true' %}
+      <option value="true" {{ 'selected' if tf == 'true' else '' }}>True</option>
+      <option value="false" {{ 'selected' if tf == 'false' else '' }}>False</option>
+    </select>
+  </label>
+</div>
+
+<!-- Typed answers -->
+<div data-for-type="short_text,long_text" hidden>
+  <label>Model answer * <span class="muted">(used for auto-checking and AI marking)</span>
+    <textarea name="{{ prefix }}model_answer" rows="2">{{ v.get('model_answer', '') }}</textarea>
+  </label>
+  <label>Rubric <span class="muted">(one point per line — the AI checks which ones the answer covers)</span>
+    <textarea name="{{ prefix }}rubric" rows="3">{{ v.get('rubric', '') }}</textarea>
+  </label>
+</div>
+{% endmacro %}

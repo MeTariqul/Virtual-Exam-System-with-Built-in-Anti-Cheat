@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Live · {{ exam.title }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>📡 Live monitor — {{ exam.title }}</h1>
+  <div>
+    <span id="live-dot" class="live-dot" title="Connecting…"></span>
+    <span id="live-status" class="muted">connecting…</span>
+    <a class="btn" href="{{ url_for('teacher.exam_results', exam_id=exam.id) }}">Results</a>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Active attempts</h2>
+  <table class="table" id="attempts-table">
+    <thead>
+      <tr>
+        <th>Student</th><th>Started</th><th>Time left</th>
+        <th>Warnings</th><th>Status</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in attempts %}
+      <tr data-attempt-id="{{ a.id }}">
+        <td>
+          <a href="{{ url_for('teacher.attempt_report', attempt_id=a.id) }}">
+            {{ a.student.display_name }}
+          </a>
+        </td>
+        <td>{{ a.started_at|clock }}</td>
+        <td class="time-cell" data-deadline="{{ a.deadline.isoformat() }}">
+          {% if a.status == 'in_progress' %}
+            {{ ((a.deadline - now).total_seconds() // 60)|int }}:{{ '%02d' % (((a.deadline - now).total_seconds() % 60)|int) }}
+          {% else %}—{% endif %}
+        </td>
+        <td class="warn-cell">
+          <span class="badge {{ 'badge-risk-high' if a.over_limit else 'badge-risk-low' }}">
+            {{ a.warning_count }}/{{ exam.violation_limit }}
+          </span>
+        </td>
+        <td><span class="badge badge-{{ a.status }}">{{ a.status|label }}</span></td>
+        <td class="action-cell">
+          {% if a.status == 'in_progress' %}
+          <div class="mini-actions">
+            <button class="btn btn-sm" data-action="message" data-attempt="{{ a.id }}">Message</button>
+            <button class="btn btn-sm" data-action="extend" data-attempt="{{ a.id }}">+5 min</button>
+            <button class="btn btn-sm btn-danger" data-action="force" data-attempt="{{ a.id }}">End</button>
+          </div>
+          {% else %}
+            <a class="btn btn-sm" href="{{ url_for('teacher.attempt_report', attempt_id=a.id) }}">Report</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if not attempts %}
+    <p class="muted">Nobody has started this exam yet.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Live violation feed</h2>
+  <div id="violation-feed" class="feed">
+    <p class="muted">Waiting for events… violations appear here the moment they happen.</p>
+  </div>
+</div>
+
+<script>
+  window.MONITOR = {
+    examId: {{ exam.id }},
+    limit: {{ exam.violation_limit }},
+    csrfToken: (document.querySelector('meta[name="csrf-token"]') || {}).content || "",
+  };
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/monitor.js') }}"></script>
+{% endblock %}

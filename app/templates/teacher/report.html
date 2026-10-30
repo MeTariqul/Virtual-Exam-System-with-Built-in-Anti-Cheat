@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+{% block title %}Report · {{ attempt.student.display_name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Cheat report — {{ attempt.student.display_name }}</h1>
+  <a class="btn" href="{{ url_for('teacher.exam_results', exam_id=exam.id) }}">← Results</a>
+</div>
+
+<!-- Summary cards -->
+<div class="summary-grid">
+  <div class="card summary-card">
+    <span class="summary-label">Score</span>
+    <span class="summary-value">
+      {% if attempt.score is not none %}{{ attempt.score|marks }}/{{ attempt.total|marks }}
+        {% if percent is not none %}<span class="muted small">({{ percent|pct }}%)</span>{% endif %}
+      {% else %}—{% endif %}
+    </span>
+  </div>
+  <div class="card summary-card">
+    <span class="summary-label">Risk score</span>
+    <span class="summary-value badge badge-risk-{{ level }}">{{ risk }} · {{ level }}</span>
+  </div>
+  <div class="card summary-card">
+    <span class="summary-label">Warnings</span>
+    <span class="summary-value {{ 'text-danger' if attempt.over_limit }}">
+      {{ attempt.warning_count }}/{{ exam.violation_limit }}
+    </span>
+  </div>
+  <div class="card summary-card">
+    <span class="summary-label">Evidence chain</span>
+    <span class="summary-value badge {{ 'badge-risk-low' if chain_ok else 'badge-risk-high' }}">
+      {{ 'intact ✓' if chain_ok else 'BROKEN ✗' }}
+    </span>
+    <span class="muted small">{{ links }} links
+      {% if not chain_ok %}· at event {{ broken_at }}{% endif %}</span>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Details</h2>
+  <table class="table kv-table">
+    <tr><th>Exam</th><td>{{ exam.title }}</td></tr>
+    <tr><th>Started</th><td>{{ attempt.started_at|dt }}</td></tr>
+    <tr><th>Submitted</th>
+      <td>{{ attempt.submitted_at|dt }}
+        {% if attempt.submitted_by %}({{ attempt.submitted_by|label }}){% endif %}</td></tr>
+    <tr><th>Duration</th>
+      <td>
+        {% if attempt.submitted_at %}
+          {{ ((attempt.submitted_at - attempt.started_at).total_seconds() // 60)|int }} min
+          {{ ((attempt.submitted_at - attempt.started_at).total_seconds() % 60)|int }} s
+        {% else %}running…{% endif %}
+      </td></tr>
+    <tr><th>Webcam consent</th>
+      <td>{{ 'granted ✓' if attempt.webcam_consent else 'refused ✗' }}</td></tr>
+    <tr><th>Identity check</th>
+      <td>
+        {% if attempt.student.photo_path %}
+          <a href="{{ url_for('auth.avatar', user_id=attempt.student_id) }}" target="_blank">
+            <img class="identity-thumb"
+                 src="{{ url_for('auth.avatar', user_id=attempt.student_id) }}"
+                 alt="Profile photo of {{ attempt.student.display_name }}">
+          </a>
+          <span class="muted small">profile photo on file — compare it with the
+            first webcam shot in the gallery below (reason: <code>identity</code>)</span>
+        {% else %}
+          <span class="muted">No profile photo on file — ask the student to add
+            one on their profile for future attempts.</span>
+        {% endif %}
+      </td></tr>
+    <tr><th>IP &amp; device</th>
+      <td class="mono small">{{ attempt.ip_address or '—' }} · {{ (attempt.user_agent or '—')[:120] }}</td></tr>
+    <tr><th>Attempt</th>
+      <td>#{{ attempt.attempt_no }} of {{ exam.attempts_allowed }} allowed</td></tr>
+    {% if passed == true %}
+      <tr><th>Outcome</th><td>✅ Passed ({{ exam.pass_mark }}% needed)</td></tr>
+    {% elif passed == false %}
+      <tr><th>Outcome</th><td>❌ Did not pass ({{ exam.pass_mark }}% needed)</td></tr>
+    {% endif %}
+    <tr><th>Warnings over limit</th>
+      <td class="{{ 'text-danger' if attempt.over_limit }}">
+        {{ 'YES — review this attempt' if attempt.over_limit else 'No' }}</td></tr>
+  </table>
+  <div class="actions-row">
+    <a class="btn" href="{{ url_for('teacher.attempt_grading', attempt_id=attempt.id) }}">
+      🤖 AI marking review
+    </a>
+    <form method="post" action="{{ url_for('teacher.attempt_regrade', attempt_id=attempt.id) }}"
+          style="display:inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="btn" type="submit">🔁 Re-grade</button>
+    </form>
+  </div>
+</div>
+
+<!-- Violation timeline -->
+<div class="card">
+  <h2>Violation timeline ({{ rows|length }})</h2>
+  {% if not rows %}
+    <p class="muted">No violations recorded. 🎉</p>
+  {% else %}
+  <table class="table">
+    <thead>
+      <tr><th>Time</th><th>Event</th><th>Question</th><th>Weight</th><th>Evidence</th></tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr class="{{ 'row-ignored' if row.ignored }}">
+        <td>{{ row.time|clock }}</td>
+        <td>
+          {{ row.label }}
+          {% if row.ignored %}<span class="badge">grace</span>{% endif %}
+          {% for k, v in row.detail.items() %}
+            <span class="muted small">{{ k }}={{ v }}</span>
+          {% endfor %}
+        </td>
+        <td>{{ '#' ~ row.question_number if row.question_number else '—' }}</td>
+        <td>{{ row.weight }}</td>
+        <td>
+          {% if row.snapshot_id %}
+            <a href="{{ url_for('teacher.snapshot_file', snapshot_id=row.snapshot_id) }}"
+               target="_blank">📷 photo</a>
+          {% else %}—{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted small">Risk score = sum of weights (grace events count 0).
+     The score guides review — it is not a verdict.</p>
+  {% endif %}
+</div>
+
+<!-- Snapshots -->
+{% if snapshots %}
+<div class="card">
+  <h2>Webcam snapshots ({{ snapshots|length }})</h2>
+  <div class="snapshot-grid">
+    {% for s in snapshots %}
+    <figure class="snapshot">
+      <a href="{{ url_for('teacher.snapshot_file', snapshot_id=s.id) }}" target="_blank">
+        <img src="{{ url_for('teacher.snapshot_file', snapshot_id=s.id) }}"
+             alt="snapshot {{ s.id }}" loading="lazy">
+      </a>
+      <figcaption>
+        {{ s.created_at|clock }} · {{ s.reason|label }}
+        {% if s.face_count >= 0 %}· {{ s.face_count }} face(s)
+        {% elif s.face_count == -1 %}· check n/a{% endif %}
+      </figcaption>
+    </figure>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Answers -->
+<div class="card">
+  <h2>Answers</h2>
+  <ol class="answer-list">
+    {% for row in answer_rows %}
+    <li class="answer-item answer-{{ 'correct' if row.correct == true else ('wrong' if row.correct == false else 'blank') }}">
+      <div class="answer-head">
+        <span class="answer-mark">
+          {% if row.correct == true %}✔{% elif row.correct == false %}✘{% else %}—{% endif %}
+        </span>
+        <strong>{{ row.number }}. {{ row.question.text }}</strong>
+        <span class="badge">{{ row.question.label }}</span>
+        {% if row.answer and row.answer.flagged %}<span class="badge">🚩 flagged</span>{% endif %}
+      </div>
+      {% set q = row.question %}
+      {% if q.type in ('mcq', 'true_false') %}
+        {% if row.answer and row.answer.selected_index is not none %}
+          <p>Chosen: <strong>{{ q.options[row.answer.selected_index] }}</strong>
+            {% if row.answer.first_answered_at %}
+              <span class="muted small">({{ row.answer.first_answered_at|clock }})</span>
+            {% endif %}
+          </p>
+        {% else %}
+          <p class="muted">Not answered</p>
+        {% endif %}
+        {% if row.correct == false %}
+          <p class="correct-answer">Correct: {{ q.options[q.correct_index] }}</p>
+        {% endif %}
+      {% elif q.type == 'multi' %}
+        {% if row.answer and row.answer.selected_indices %}
+          <p>Chosen:
+            {% for idx in row.answer.selected_indices %}<strong>{{ q.options[idx] }}</strong>{{ ', ' if not loop.last }}{% endfor %}
+          </p>
+        {% else %}
+          <p class="muted">Not answered</p>
+        {% endif %}
+        {% if row.correct == false %}
+          <p class="correct-answer">Correct:
+            {% for idx in q.correct_indices %}{{ q.options[idx] }}{{ ', ' if not loop.last }}{% endfor %}
+          </p>
+        {% endif %}
+      {% else %}
+        {% if row.answer and row.answer.response %}
+          <pre class="typed-answer">{{ row.answer.response }}</pre>
+        {% else %}
+          <p class="muted">Not answered</p>
+        {% endif %}
+        {% set gr = gradings.get(q.id) %}
+        {% if gr %}
+          <p class="muted small">
+            AI suggestion: {{ gr.suggested_marks|marks }}/{{ q.points|marks }}
+            · confidence {{ (gr.confidence * 100)|round|int if gr.confidence is not none else '?' }}%
+            · model {{ gr.model_name or '?' }} ·
+            <strong class="{{ 'text-danger' if (gr.confidence or 1) < 0.5 else '' }}">
+              {{ gr.status|label }}</strong>
+            {% if gr.final_marks is not none %}· final {{ gr.final_marks|marks }}{% endif %}
+          </p>
+        {% endif %}
+        {% if q.model_answer %}
+          <p class="correct-answer">Model answer: {{ q.model_answer }}</p>
+        {% endif %}
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+</div>
+
+<!-- Student explanations & re-check requests -->
+{% if notes %}
+<div class="card">
+  <h2>Student notes ({{ notes|length }})</h2>
+  <ul class="meta-list">
+    {% for note in notes %}
+      <li class="tmsg tmsg-{{ note.kind }}">
+        <strong>{{ '🔁 Re-check request' if note.kind == 'recheck' else '📝 Explanation' }}:</strong>
+        {{ note.body }} <span class="muted">— {{ note.created_at|dt }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<!-- Handwritten submissions -->
+{% if submissions %}
+<div class="card">
+  <h2>Handwritten submissions ({{ submissions|length }})</h2>
+  {% for sub in submissions %}
+  <div class="submission-block">
+    <p>
+      <strong>{{ sub.original_name }}</strong> — {{ sub.ocr_status|label }}
+      · SHA-256 <code class="mono small">{{ sub.file_hash[:16] }}…</code>
+      {% if sub.late %}<span class="badge badge-risk-medium">late upload</span>{% endif %}
+      {% if sub.duplicate_of %}<span class="badge badge-risk-high">
+        duplicate of attempt {{ sub.duplicate_of }}</span>{% endif %}
+      · {{ sub.uploaded_at|dt }}
+    </p>
+    <div class="snapshot-grid">
+      {% for page in sub.pages %}
+      <figure class="snapshot">
+        {% if page.image_path %}
+          <img src="{{ url_for('teacher.submission_page_file', page_id=page.id) }}"
+               alt="page {{ page.page_no }}" loading="lazy">
+        {% else %}
+          <span class="muted small">(no page image — text only)</span>
+        {% endif %}
+        <figcaption>page {{ page.page_no }} · OCR:
+          {{ (page.ocr_confidence * 100)|round|int if page.ocr_confidence is not none else '?' }}%</figcaption>
+      </figure>
+      {% endfor %}
+    </div>
+    {% for page in sub.pages %}
+      <details>
+        <summary>Extracted text — page {{ page.page_no }}</summary>
+        <pre class="typed-answer">{{ page.extracted_text }}</pre>
+      </details>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="actions-row">
+  <a class="btn" href="{{ url_for('teacher.exam_monitor', exam_id=exam.id) }}">Back to monitor</a>
+</div>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Question bank · Virtual Exam System{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Question bank</h1>
+  <div>
+    <a class="btn" href="{{ url_for('teacher.question_bank_csv') }}">⬇ Export CSV</a>
+    <a class="btn btn-primary" href="{{ url_for('teacher.bank_new') }}">＋ New bank question</a>
+    <a class="btn" href="{{ url_for('teacher.dashboard') }}">← My exams</a>
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" class="form-row">
+    <label class="grow">Filter by category
+      <select name="category" onchange="this.form.submit()">
+        <option value="">All categories</option>
+        {% for c in categories %}
+          <option value="{{ c.id }}" {{ 'selected' if selected_category == c.id }}>
+            {{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <noscript><button class="btn" type="submit">Filter</button></noscript>
+  </form>
+
+  {% if not questions %}
+    <p class="muted">No questions yet — write one with “＋ New bank question” above,
+       or add questions from an exam's Questions page.</p>
+  {% else %}
+  <table class="table">
+    <thead>
+      <tr><th>Question</th><th>Type</th><th>Category</th><th>Difficulty</th>
+          <th>Points</th><th>Exam</th><th>Copy to…</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for q in questions %}
+      <tr>
+        <td>
+          <strong>{{ q.text[:120] }}</strong>
+          {% if q.options %}
+            <div class="muted small">
+              {% for opt in q.options %}
+                {{ '✔' if (loop.index0 == q.correct_index or loop.index0 in (q.correct_indices or [])) else '·' }}
+                {{ opt[:40] }}{{ ' | ' if not loop.last }}
+              {% endfor %}
+            </div>
+          {% elif q.model_answer %}
+            <div class="muted small">model: {{ q.model_answer[:80] }}</div>
+          {% endif %}
+        </td>
+        <td><span class="badge">{{ q.label }}</span></td>
+        <td>{{ q.category.name if q.category else '—' }}</td>
+        <td>{{ q.difficulty or '—' }}</td>
+        <td>{{ q.points }}</td>
+        <td class="small">
+          {% if q.exam %}{{ q.exam.title }}
+          {% else %}<span class="badge" title="Standalone bank question">bank</span>{% endif %}
+        </td>
+        <td>
+          <form method="post" class="inline-form"
+                action="{{ url_for('teacher.question_copy', question_id=q.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <select name="exam_id" required>
+              <option value="">choose exam…</option>
+              {% for e in exams %}{% if e.id != q.exam_id %}
+                <option value="{{ e.id }}">{{ e.title }}</option>
+              {% endif %}{% endfor %}
+            </select>
+            <button class="btn btn-sm" type="submit">Copy</button>
+          </form>
+        </td>
+        <td>
+          <form method="post"
+                action="{{ url_for('teacher.question_delete', question_id=q.id) }}"
+                onsubmit="return confirm('Delete this question from your bank?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-sm btn-danger" type="submit">✕</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

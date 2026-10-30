@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Create account · Virtual Exam System{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+{% block nav %}{% endblock %}
+
+{# New design system files, loaded after the legacy sheets so the
+   current page's cascade wins. Moved into base.html when the whole
+   app is migrated. #}
+{% block head %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-card">
+  <h1>Student registration</h1>
+  <p class="muted">Create your account, then your teacher can see you in
+     the exam lists.</p>
+
+  <form method="post" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="username">Username *
+      <input id="username" type="text" name="username" required autofocus
+             value="{{ form.get('username', '') }}"
+             pattern="[A-Za-z0-9_\-]{3,32}"
+             title="Letters, numbers, _ and - (3–32 characters)">
+    </label>
+    <label for="full_name">Full name
+      <input id="full_name" type="text" name="full_name" value="{{ form.get('full_name', '') }}">
+    </label>
+    <label for="email">Email (optional)
+      <input id="email" type="email" name="email" value="{{ form.get('email', '') }}">
+    </label>
+    <label for="password">Password * <span class="muted">(min 6 characters)</span>
+      <input id="password" type="password" name="password" required minlength="6"
+             autocomplete="new-password">
+    </label>
+    <label for="confirm">Confirm password *
+      <input id="confirm" type="password" name="confirm" required autocomplete="new-password">
+    </label>
+    <button class="btn btn-primary" type="submit">Create account</button>
+  </form>
+
+  <p class="muted center">Already registered?
+     <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+</div>
+{% endblock %}

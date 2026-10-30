@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}My exams · Virtual Exam System{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{% if current_user.role == 'admin' %}All exams{% else %}My exams{% endif %}</h1>
+  <a class="btn btn-primary" href="{{ url_for('teacher.exam_new') }}">＋ New exam</a>
+</div>
+
+{% if stats %}
+<div class="summary-grid">
+  <div class="card summary-card">
+    <span class="summary-label">Exams</span>
+    <span class="summary-value">{{ stats.exams }}</span>
+    <span class="muted small">{{ stats.published }} published</span>
+  </div>
+  <div class="card summary-card">
+    <span class="summary-label">Attempts</span>
+    <span class="summary-value">{{ stats.attempts }}</span>
+    <span class="muted small">{{ stats.in_progress }} running now</span>
+  </div>
+  <div class="card summary-card">
+    <span class="summary-label">AI marks to review</span>
+    <span class="summary-value">{{ stats.pending_grading }}</span>
+  </div>
+  <div class="card summary-card">
+    <span class="summary-label">Re-check requests</span>
+    <span class="summary-value">{{ stats.rechecks }}</span>
+  </div>
+</div>
+{% endif %}
+
+{% if not exams %}
+  <div class="card center">
+    <p class="muted">No exams yet — create your first one.</p>
+    <a class="btn btn-primary" href="{{ url_for('teacher.exam_new') }}">Create exam</a>
+  </div>
+{% endif %}
+
+<div class="exam-grid">
+  {% for exam in exams %}
+  <div class="card exam-card">
+    <div class="exam-card-head">
+      <h2>{{ exam.title }}</h2>
+      <span class="badge badge-{{ exam.status_label }}">{{ exam.status_label|label }}</span>
+    </div>
+    <ul class="meta-list">
+      <li>👤 {{ exam.creator.display_name if exam.creator else '—' }}</li>
+      <li>❓ {{ exam.questions|length }} question(s)
+        {% if exam.pool_size %}· pool of {{ exam.pool_size }} each{% endif %}</li>
+      <li>⏱ {{ exam.duration_minutes }} min · 🚩 limit {{ exam.violation_limit }}</li>
+      <li>📊 {{ exam.attempts|length }} attempt(s)</li>
+      {% if exam.webcam_enabled %}<li>📷 webcam on</li>{% endif %}
+    </ul>
+
+    <div class="card-actions">
+      <a class="btn btn-sm" href="{{ url_for('teacher.exam_questions', exam_id=exam.id) }}">Questions</a>
+      <a class="btn btn-sm" href="{{ url_for('teacher.exam_monitor', exam_id=exam.id) }}">Live</a>
+      <a class="btn btn-sm" href="{{ url_for('teacher.exam_results', exam_id=exam.id) }}">Results</a>
+      <a class="btn btn-sm" href="{{ url_for('teacher.exam_edit', exam_id=exam.id) }}">Edit</a>
+    </div>
+    <div class="card-actions">
+      <form method="post" action="{{ url_for('teacher.exam_publish', exam_id=exam.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn-sm {{ 'btn-primary' if not exam.is_published else '' }}" type="submit">
+          {{ 'Publish' if not exam.is_published else 'Unpublish' }}
+        </button>
+      </form>
+      <form method="post" action="{{ url_for('teacher.exam_duplicate', exam_id=exam.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn-sm" type="submit" title="Copy settings and questions into a new draft exam">⧉ Duplicate</button>
+      </form>
+      <form method="post" action="{{ url_for('teacher.exam_delete', exam_id=exam.id) }}"
+            onsubmit="return confirm('Delete “{{ exam.title }}” and all its attempts?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

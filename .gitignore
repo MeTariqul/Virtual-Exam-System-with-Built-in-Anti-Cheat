@@ -1,0 +1,54 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Instance folder (generated data)
+instance/
+
+# Environment files
+.env
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploads / snapshots / profiles (runtime data)
+uploads/
+snapshots/
+profiles/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Node
+node_modules/
+
+# Test / coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Server PID file
+server_pid.txt
+
+# Build artifacts
+*.egg-info/
+dist/
+build/

@@ -1,0 +1,19 @@
+# OPTIONAL AI upgrades for the Virtual Exam System.
+#
+# The app runs out of the box WITHOUT these (mock OCR / built-in vector
+# store / heuristic marking — see app/ai/). Install this file only if you
+# want the real engines:
+#
+#   pip install -r requirements-ai.txt
+#
+#   - sentence-transformers  -> real semantic embeddings for RAG retrieval
+#   - transformers + torch    -> real TrOCR handwriting OCR
+#   - chromadb                -> vector database mirror (built-in store works too)
+#   - ollama                  -> local LLM marking of typed answers
+#                                 (also: `pip install ollama` + `ollama pull llama3.2`)
+
+sentence-transformers>=2.7
+transformers>=4.44
+torch>=2.3
+chromadb>=0.5
+ollama>=0.3

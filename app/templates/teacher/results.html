@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Results · {{ exam.title }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Results — {{ exam.title }}</h1>
+  <div>
+    <a class="btn" href="{{ url_for('teacher.exam_results_csv', exam_id=exam.id) }}">⬇ CSV</a>
+    <a class="btn" href="{{ url_for('teacher.exam_results_pdf', exam_id=exam.id) }}">⬇ PDF</a>
+    <a class="btn" href="{{ url_for('teacher.exam_monitor', exam_id=exam.id) }}">Live monitor</a>
+    <a class="btn" href="{{ url_for('teacher.dashboard') }}">← My exams</a>
+  </div>
+</div>
+
+{% if summary.count %}
+<div class="summary-grid">
+  <div class="card summary-card">
+    <span class="summary-label">Average</span>
+    <span class="summary-value">{{ summary.average|pct }}%</span>
+  </div>
+  <div class="card summary-card">
+    <span class="summary-label">Highest</span>
+    <span class="summary-value">{{ summary.highest|pct }}%</span>
+  </div>
+  <div class="card summary-card">
+    <span class="summary-label">Lowest</span>
+    <span class="summary-value">{{ summary.lowest|pct }}%</span>
+  </div>
+  <div class="card summary-card">
+    <span class="summary-label">Pass rate</span>
+    <span class="summary-value">{{ summary.pass_rate|pct }}%
+      <span class="muted small">({{ summary.passed }}/{{ summary.count }} · pass {{ exam.pass_mark }}%)</span>
+    </span>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Score chart</h2>
+  <div class="score-chart">
+    {% for p in summary.percentages %}
+    <div class="chart-row">
+      <div class="chart-bar {{ 'bar-fail' if p < exam.pass_mark }}"
+           style="width: {{ [p, 3]|max }}%"></div>
+      <span class="chart-label">{{ p|pct }}%</span>
+    </div>
+    {% endfor %}
+  </div>
+  <p class="muted small">Each bar is one submitted attempt (lowest → highest).
+     Red bars are below the pass mark.</p>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Attempts ({{ attempts|length }})</h2>
+  {% if not attempts %}
+    <p class="muted">No attempts yet.</p>
+  {% else %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Student</th><th>Try</th><th>Started</th><th>Submitted</th>
+        <th>Score</th><th>Warnings</th><th>Risk</th><th>Status</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in attempts %}
+      <tr>
+        <td>
+          {{ a.student.display_name }}
+          {% if a.ip_address %}<span class="muted small mono">{{ a.ip_address }}</span>{% endif %}
+        </td>
+        <td>{{ a.attempt_no }}/{{ exam.attempts_allowed }}</td>
+        <td>{{ a.started_at|dt }}</td>
+        <td>{{ a.submitted_at|dt }}</td>
+        <td>
+          {% if a.score is not none %}
+            <strong>{{ a.score|marks }}/{{ a.total|marks }}</strong>
+            {% if a.total %}({{ (100 * a.score / a.total)|round|int }}%){% endif %}
+            {% if a.total and 100 * a.score / a.total >= exam.pass_mark %}
+              <span class="badge badge-open">pass</span>
+            {% elif a.total %}
+              <span class="badge badge-risk-high">fail</span>
+            {% endif %}
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          <span class="badge {{ 'badge-risk-high' if a.over_limit else 'badge-risk-low' }}">
+            {{ a.warning_count }}/{{ exam.violation_limit }}
+          </span>
+        </td>
+        <td>
+          {% if a.risk_level %}
+            <span class="badge badge-risk-{{ a.risk_level }}">{{ a.risk_level }} ({{ a.risk_score }})</span>
+          {% else %}—{% endif %}
+        </td>
+        <td><span class="badge badge-{{ a.status }}">{{ a.status|label }}</span></td>
+        <td>
+          <a href="{{ url_for('teacher.attempt_report', attempt_id=a.id) }}">report →</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+
+{% if collusion %}
+<div class="card card-warn">
+  <h2>⚠ Possible answer sharing</h2>
+  <p class="muted">The same answers appear in these attempts. This is a
+     statistical signal only — review the reports before concluding anything.</p>
+  <ul>
+    {% for pair in collusion %}
+    <li>
+      <strong>{{ pair.attempt_a.student.display_name }}</strong> &amp;
+      <strong>{{ pair.attempt_b.student.display_name }}</strong> —
+      {{ pair.identical }}/{{ pair.shared }} identical answers
+      ({{ (pair.ratio * 100)|round|int }}%)
+      · <a href="{{ url_for('teacher.attempt_report', attempt_id=pair.attempt_a.id) }}">report A</a>
+      · <a href="{{ url_for('teacher.attempt_report', attempt_id=pair.attempt_b.id) }}">report B</a>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if stats %}
+<div class="card">
+  <h2>Question analysis</h2>
+  <table class="table">
+    <thead>
+      <tr><th>#</th><th>Question</th><th>Answered</th><th>Correct</th><th>Difficulty</th><th>Discrimination</th><th>Avg time</th></tr>
+    </thead>
+    <tbody>
+      {% for q in exam.questions %}
+      {% set s = stats.get(q.id) %}
+      {% set d = discrimination.get(q.id) %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ q.text }}</td>
+        <td>{{ s.answered if s else 0 }}</td>
+        <td>
+          {% if s and s.rate is not none %}
+            {{ (s.rate * 100)|round|int }}%
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          {% if s and s.rate is not none %}
+            <span class="badge {{ 'badge-risk-low' if s.rate >= 0.8 else ('badge-risk-medium' if s.rate >= 0.5 else 'badge-risk-high') }}">
+              {{ 'easy' if s.rate >= 0.8 else ('medium' if s.rate >= 0.5 else 'hard') }}
+            </span>
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          {% if d is not none %}
+            <span class="badge {{ 'badge-risk-low' if d >= 0.3 else ('badge-risk-medium' if d >= 0.1 else 'badge-risk-high') }}"
+                  title="Upper vs lower 27% of students — how well this question separates strong from weak students">
+              {{ d }} · {{ 'good' if d >= 0.3 else ('fair' if d >= 0.1 else ('poor' if d >= 0 else 'negative')) }}
+            </span>
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          {% if s and s.avg_seconds is not none %}
+            {{ (s.avg_seconds)|round|int }}s
+          {% else %}—{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,91 @@
+/* ============================================================
+   auth.css — login & register pages (page file of the design
+   system). Loaded last, so it wins over style.css/extra.css
+   and over base.css/components.css where selectors overlap.
+
+   Look: one centred card on a plain tinted background —
+   no gradients, no glass, no decorative emoji.
+   ============================================================ */
+
+/* Plain page background (legacy painted purple radial gradients here).
+   Dark mode is handled by `html[data-theme="dark"] body` in base.css. */
+body.auth-page {
+  background: var(--bg);
+}
+
+/* Centre the card in the first grid row (footer stays below it) */
+.auth-page > main {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6) var(--space-4);
+}
+
+.auth-card {
+  position: relative;
+  width: min(420px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow);
+  padding: var(--space-6);
+}
+
+/* Legacy drew a gradient bar across the card top — removed */
+.auth-card::before { content: none; }
+
+.auth-card h1 {
+  margin-top: 0;
+  font-size: 1.35rem;
+  font-weight: 650;
+  letter-spacing: -.02em;
+}
+
+/* Full-width submit inside the card (legacy rule, restated) */
+.auth-card .btn-primary { width: 100%; }
+
+/* ---------- demo accounts block ---------- */
+.demo-hint {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+  font-size: .875rem;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.demo-hint strong { color: var(--text); font-weight: 600; }
+.demo-hint code {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-control);
+  width: fit-content;
+  font-size: .8rem;
+  color: var(--text);
+}
+/* Legacy dark rule paints these chips with var(--surface) — keep surface-2 */
+html[data-theme="dark"] .demo-hint code {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+/* ---------- footer on the auth pages ----------
+   Legacy turned the footer text white for the purple background;
+   on a plain background it must be muted instead (0,2,1 beats
+   base.css, so it needs its own override). */
+.auth-page .site-footer {
+  margin-top: 0;
+  background: transparent;
+  border-top: none;
+  padding: var(--space-4);
+}
+.auth-page .site-footer p { color: var(--text-muted); }
+
+/* ---------- small screens ---------- */
+@media (max-width: 480px) {
+  .auth-page > main { padding: var(--space-5) var(--space-3); }
+  .auth-card { padding: var(--space-5) var(--space-4); }
+}

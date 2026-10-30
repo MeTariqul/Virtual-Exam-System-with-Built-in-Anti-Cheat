@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en" data-theme="">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>{% block title %}Virtual Exam System{% endblock %}</title>
+  <script>
+    // Apply the saved theme before first paint (avoids a white flash).
+    try { document.documentElement.dataset.theme = localStorage.getItem("theme") || "light"; }
+    catch (e) { /* storage blocked — stay light */ }
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/extra.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  {% block nav %}
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">🎓</span>Virtual&nbsp;Exam</a>
+      <nav aria-label="Main navigation">
+        {% if current_user %}
+          {% set ep = request.endpoint or '' %}
+          {% set ns = ep.split('.')[0] %}
+          {% if current_user.role == 'student' %}
+            {% set items = [
+              (ns == 'student' and ep != 'student.history', url_for('student.dashboard'), 'Exams'),
+              (ep == 'student.history', url_for('student.history'), 'History')
+            ] %}
+          {% elif current_user.role == 'teacher' %}
+            {% set bank_eps = ('teacher.question_bank', 'teacher.bank_new', 'teacher.question_copy') %}
+            {% set items = [
+              (ns == 'teacher' and ep != 'teacher.exam_new' and ep not in bank_eps,
+               url_for('teacher.dashboard'), 'My exams'),
+              (ep == 'teacher.exam_new', url_for('teacher.exam_new'), 'New exam'),
+              (ep in bank_eps, url_for('teacher.question_bank'), 'Question bank')
+            ] %}
+          {% else %}
+            {% set items = [
+              (ns == 'admin' and ep not in ('admin.settings', 'admin.audit_log'),
+               url_for('admin.dashboard'), 'Dashboard'),
+              (ep == 'admin.settings', url_for('admin.settings'), 'Settings'),
+              (ep == 'admin.audit_log', url_for('admin.audit_log'), 'Audit log')
+            ] %}
+          {% endif %}
+          {% for active, href, label in items %}
+            <a class="nav-link{% if active %} is-active{% endif %}"
+               href="{{ href }}"{% if active %} aria-current="page"{% endif %}>{{ label }}</a>
+          {% endfor %}
+        {% endif %}
+      </nav>
+      <div class="topbar-right">
+        <button type="button" class="btn btn-ghost theme-toggle" id="theme-toggle"
+                title="Toggle dark mode" aria-label="Toggle dark mode">🌓</button>
+        {% if current_user %}
+          <a class="whoami" href="{{ url_for('auth.profile') }}" title="Profile">
+            {% if current_user.photo_path %}
+              <img class="avatar" src="{{ url_for('auth.avatar', user_id=current_user.id) }}" alt="">
+            {% endif %}
+            {{ current_user.display_name }}
+            <em class="badge badge-{{ current_user.role }}">{{ current_user.role }}</em>
+          </a>
+          <a class="btn btn-ghost" href="{{ url_for('auth.logout') }}">Sign out</a>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+  {% endblock %}
+
+  <main id="main-content" class="container" role="main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flashes" aria-live="polite" aria-atomic="true">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ 'error' if category == 'error' else 'ok' }}" role="alert">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer" role="contentinfo">
+    <p class="muted small">Virtual Exam System · Built for fair assessment</p>
+  </footer>
+
+  <!-- Global toast container (replaces native alert/confirm) -->
+  <div id="toast-container" class="toast-container" aria-live="assertive" aria-atomic="true"></div>
+
+  <!-- Global modal dialog (accessible, styleable replacement for confirm()) -->
+  <dialog id="global-modal" class="modal" role="alertdialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-backdrop" tabindex="-1"></div>
+    <div class="modal-content">
+      <h3 id="modal-title"></h3>
+      <p id="modal-message"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-modal-cancel>Cancel</button>
+        <button type="button" class="btn btn-primary" data-modal-confirm>Confirm</button>
+      </div>
+    </div>
+  </dialog>
+
+  {% block scripts %}{% endblock %}
+  <script>
+    // Theme toggle (persisted)
+    (function () {
+      var btn = document.getElementById("theme-toggle");
+      if (!btn) return;
+      btn.addEventListener("click", function () {
+        var root = document.documentElement;
+        var next = root.dataset.theme === "dark" ? "light" : "dark";
+        root.dataset.theme = next;
+        try { localStorage.setItem("theme", next); } catch (e) {}
+      });
+    })();
+
+    // Global form loading state (shows spinner on submit buttons)
+    document.addEventListener("submit", function (e) {
+      var form = e.target;
+      if (!(form instanceof HTMLFormElement)) return;
+      var submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
+      if (!submitBtn) return;
+      // Don't double-disable
+      if (submitBtn.disabled) return;
+      submitBtn.disabled = true;
+      var originalText = submitBtn.textContent;
+      submitBtn.dataset.originalText = originalText;
+      submitBtn.classList.add("is-loading"); // CSS spinner (no emoji)
+      // Re-enable after a safety timeout in case navigation fails
+      setTimeout(function () {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove("is-loading");
+        submitBtn.textContent = originalText;
+      }, 10000);
+    });
+
+    // Toast system
+    window.toast = function (message, type) {
+      var container = document.getElementById("toast-container");
+      if (!container) return;
+      var toast = document.createElement("div");
+      toast.className = "toast toast-" + (type || "info");
+      toast.setAttribute("role", "alert");
+      toast.textContent = message;
+      container.appendChild(toast);
+      // Animate in
+      requestAnimationFrame(function () { toast.classList.add("show"); });
+      // Auto-dismiss
+      setTimeout(function () {
+        toast.classList.remove("show");
+        toast.addEventListener("transitionend", function () { toast.remove(); }, { once: true });
+      }, 4000);
+    };
+
+    // Accessible modal dialog (replaces window.confirm)
+    window.confirmAsync = function (title, message) {
+      return new Promise(function (resolve) {
+        var modal = document.getElementById("global-modal");
+        if (!modal) { resolve(window.confirm(message)); return; }
+        modal.querySelector("#modal-title").textContent = title || "Confirm";
+        modal.querySelector("#modal-message").textContent = message;
+        var onCancel = function () { cleanup(); resolve(false); };
+        var onConfirm = function () { cleanup(); resolve(true); };
+        var cleanup = function () {
+          modal.close();
+          modal.querySelector("[data-modal-cancel]").removeEventListener("click", onCancel);
+          modal.querySelector("[data-modal-confirm]").removeEventListener("click", onConfirm);
+          modal.querySelector(".modal-backdrop").removeEventListener("click", onCancel);
+        };
+        modal.querySelector("[data-modal-cancel]").addEventListener("click", onCancel);
+        modal.querySelector("[data-modal-confirm]").addEventListener("click", onConfirm);
+        modal.querySelector(".modal-backdrop").addEventListener("click", onCancel);
+        modal.showModal();
+        modal.querySelector("[data-modal-cancel]").focus();
+      });
+    };
+
+    // Keyboard shortcuts help (press ?)
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "?" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        var active = document.activeElement;
+        if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable)) return;
+        e.preventDefault();
+        toast("Keyboard: ? = help, / = focus search, Esc = close dialogs", "info");
+      }
+    });
+  </script>
+</body>
+</html>

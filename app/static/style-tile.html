@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Style tile — Exam System UI (Step 1)</title>
+
+<!-- The real design tokens. This is the only app file the tile uses. -->
+<link rel="stylesheet" href="css/theme.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   PREVIEW ONLY — these styles are NOT part of the app yet.
+   They demonstrate how theme.css tokens will be used once we
+   build components.css (Step 3). Every colour/size below comes
+   from a token in theme.css; nothing is hard-coded except
+   transparent white/black used for tints.
+   ============================================================ */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+.tile {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-5) var(--space-7);
+}
+
+/* ---------- header ---------- */
+.tile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+.tile-header h1 { margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -.02em; }
+.tile-header p { margin: 4px 0 0; font-size: 14px; color: var(--text-muted); }
+
+h2 {
+  margin: var(--space-6) 0 var(--space-3);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+}
+
+/* ---------- buttons ---------- */
+.btn {
+  font: 500 15px/1 var(--font-sans);
+  padding: 11px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  background: none;
+  color: inherit;
+  transition: background-color .15s ease, border-color .15s ease;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-secondary { background: var(--surface); border-color: var(--border); color: var(--text); }
+.btn-secondary:hover { background: var(--surface-2); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+.btn-link {
+  padding: 0;
+  border: 0;
+  color: var(--primary);
+  font: 500 15px/1.55 var(--font-sans);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+
+/* focus is visible on everything reachable by keyboard */
+:is(button, input, select, a):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---------- form controls ---------- */
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4); max-width: 720px; }
+.field { display: grid; gap: var(--space-2); }
+.field label { font-size: 14px; font-weight: 500; }
+.field input, .field select {
+  font: 400 15px/1.4 var(--font-sans);
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: 10px 12px;
+}
+.field input::placeholder { color: var(--text-muted); }
+.field .hint { font-size: 13px; color: var(--text-muted); }
+.choices { display: flex; gap: var(--space-5); margin-top: var(--space-3); font-size: 15px; }
+.choices label { display: inline-flex; align-items: center; gap: var(--space-2); }
+input[type="checkbox"], input[type="radio"] { width: 16px; height: 16px; accent-color: var(--primary); }
+
+/* ---------- card ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow);
+  padding: var(--space-5);
+  max-width: 520px;
+}
+.card h3 { margin: 0 0 var(--space-2); font-size: 18px; font-weight: 600; }
+.card p { margin: 0 0 var(--space-4); font-size: 15px; color: var(--text-muted); }
+.card-footer {
+  display: flex;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+/* ---------- table ---------- */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  font-size: 15px;
+}
+th {
+  background: var(--surface-2);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+td { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- alerts ---------- */
+.alert {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid;
+  border-radius: var(--radius-control);
+  font-size: 15px;
+  max-width: 720px;
+}
+.alert + .alert { margin-top: var(--space-3); }
+.alert strong { display: block; font-weight: 600; }
+.alert p { margin: 2px 0 0; }
+.alert-info    { border-color: var(--accent);  background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.alert-success { border-color: var(--success); background: color-mix(in srgb, var(--success) 8%, var(--surface)); }
+.alert-warning { border-color: var(--warning); background: color-mix(in srgb, var(--warning) 8%, var(--surface)); }
+.alert-danger  { border-color: var(--danger);  background: color-mix(in srgb, var(--danger) 8%, var(--surface)); }
+
+/* ---------- badges ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.badge-success { color: var(--success); background: color-mix(in srgb, var(--success) 12%, var(--surface)); }
+.badge-danger  { color: var(--danger);  background: color-mix(in srgb, var(--danger) 12%, var(--surface)); }
+.badge-primary { color: var(--primary); background: color-mix(in srgb, var(--primary) 12%, var(--surface)); }
+.badge-warning { color: var(--warning); background: color-mix(in srgb, var(--warning) 12%, var(--surface)); }
+
+/* ---------- swatches ---------- */
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: var(--space-3); }
+.swatch { border: 1px solid var(--border); border-radius: var(--radius-card); overflow: hidden; background: var(--surface); }
+.swatch-chip { height: 48px; }
+.swatch-meta { padding: var(--space-3); }
+.swatch-name { font: 500 13px/1.3 var(--font-mono); }
+.swatch-hex { font: 400 12px/1.4 var(--font-mono); color: var(--text-muted); }
+.swatch-use { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+/* ---------- type demo ---------- */
+.type-demo .t-title { font-size: 28px; font-weight: 600; letter-spacing: -.02em; }
+.type-demo .t-section { font-size: 20px; font-weight: 600; }
+.type-demo .t-body { font-size: 16px; }
+.type-demo .t-caption { font-size: 13px; color: var(--text-muted); }
+.type-demo p { margin: var(--space-2) 0 0; max-width: 60ch; }
+</style>
+</head>
+
+<body>
+<div class="tile">
+
+  <header class="tile-header">
+    <div>
+      <h1>Style tile</h1>
+      <p>Step 1 preview — palette, type, buttons, inputs, card, table, alerts, badges. Toggle to check dark mode.</p>
+    </div>
+    <button id="theme-toggle" class="btn btn-secondary" type="button">Dark mode</button>
+  </header>
+
+  <!-- ============ 1. COLOURS ============ -->
+  <h2>1 — Colours (live from theme.css)</h2>
+  <div class="swatches">
+    <div class="swatch"><div class="swatch-chip" style="background:var(--bg)"></div><div class="swatch-meta"><div class="swatch-name">--bg</div><div class="swatch-hex"></div><div class="swatch-use">page background</div></div></div>
+    <div class="swatch"><div class="swatch-chip" style="background:var(--surface)"></div><div class="swatch-meta"><div class="swatch-name">--surface</div><div class="swatch-hex"></div><div class="swatch-use">cards, panels</div></div></div>
+    <div class="swatch"><div class="swatch-chip" style="background:var(--surface-2)"></div><div class="swatch-meta"><div class="swatch-name">--surface-2</div><div class="swatch-hex"></div><div class="swatch-use">table headers</div></div></div>
+    <div class="swatch"><div class="swatch-chip" style="background:var(--border)"></div><div class="swatch-meta"><div class="swatch-name">--border</div><div class="swatch-hex"></div><div class="swatch-use">borders, dividers</div></div></div>
+    <div class="swatch"><div class="swatch-chip" style="background:var(--text)"></div><div class="swatch-meta"><div class="swatch-name">--text</div><div class="swatch-hex"></div><div class="swatch-use">headings, body</div></div></div>
+    <div class="swatch"><div class="swatch-chip" style="background:var(--text-muted)"></div><div class="swatch-meta"><div class="swatch-name">--text-muted</div><div class="swatch-hex"></div><div class="swatch-use">captions, meta</div></div></div>
+    <div class="swatch"><div class="swatch-chip" style="background:var(--primary)"></div><div class="swatch-meta"><div class="swatch-name">--primary</div><div class="swatch-hex"></div><div class="swatch-use">buttons, links, active nav</div></div></div>
+    <div class="swatch"><div class="swatch-chip" style="background:var(--primary-hover)"></div><div class="swatch-meta"><div class="swatch-name">--primary-hover</div><div class="swatch-hex"></div><div class="swatch-use">hover / pressed</div></div></div>
+    <div class="swatch"><div class="swatch-chip" style="background:var(--accent)"></div><div class="swatch-meta"><div class="swatch-name">--accent</div><div class="swatch-hex"></div><div class="swatch-use">focus rings, info</div></div></div>
+    <div class="swatch"><div class="swatch-chip" style="background:var(--success)"></div><div class="swatch-meta"><div class="swatch-name">--success</div><div class="swatch-hex"></div><div class="swatch-use">passed, correct</div></div></div>
+    <div class="swatch"><div class="swatch-chip" style="background:var(--warning)"></div><div class="swatch-meta"><div class="swatch-name">--warning</div><div class="swatch-hex"></div><div class="swatch-use">warnings, timer</div></div></div>
+    <div class="swatch"><div class="swatch-chip" style="background:var(--danger)"></div><div class="swatch-meta"><div class="swatch-name">--danger</div><div class="swatch-hex"></div><div class="swatch-use">violations, errors</div></div></div>
+    <div class="swatch"><div class="swatch-chip" style="background:var(--risk-low)"></div><div class="swatch-meta"><div class="swatch-name">--risk-low</div><div class="swatch-hex"></div><div class="swatch-use">risk: Low</div></div></div>
+    <div class="swatch"><div class="swatch-chip" style="background:var(--risk-medium)"></div><div class="swatch-meta"><div class="swatch-name">--risk-medium</div><div class="swatch-hex"></div><div class="swatch-use">risk: Medium</div></div></div>
+    <div class="swatch"><div class="swatch-chip" style="background:var(--risk-high)"></div><div class="swatch-meta"><div class="swatch-name">--risk-high</div><div class="swatch-hex"></div><div class="swatch-use">risk: High</div></div></div>
+  </div>
+
+  <!-- ============ 2. TYPOGRAPHY ============ -->
+  <h2>2 — Typography</h2>
+  <div class="type-demo">
+    <div class="t-title">Exam monitor — DBMS Midterm</div>
+    <div class="t-section">Students (18)</div>
+    <div class="t-body">Body text at 16px with a line height of 1.55. Left-aligned, comfortable to read in long tables and reports.</div>
+    <div class="t-caption">Caption / meta — created 12 Oct 2026 by Teacher Rahman · 45 minutes · 20 questions</div>
+  </div>
+
+  <!-- ============ 3. BUTTONS ============ -->
+  <h2>3 — Buttons</h2>
+  <div class="row">
+    <button class="btn btn-primary" type="button">Start exam</button>
+    <button class="btn btn-secondary" type="button">Cancel</button>
+    <button class="btn btn-danger" type="button">Force submit</button>
+    <button class="btn btn-primary" type="button" disabled>Disabled</button>
+    <button class="btn-link" type="button">Forgot password?</button>
+  </div>
+
+  <!-- ============ 4. FORMS ============ -->
+  <h2>4 — Form controls</h2>
+  <div class="fields">
+    <div class="field">
+      <label for="demo-title">Exam title</label>
+      <input id="demo-title" type="text" value="DBMS Midterm">
+    </div>
+    <div class="field">
+      <label for="demo-code">Access code</label>
+      <input id="demo-code" type="text" placeholder="Ask your teacher">
+      <span class="hint">Letters and numbers, no spaces.</span>
+    </div>
+    <div class="field">
+      <label for="demo-dur">Duration</label>
+      <select id="demo-dur">
+        <option>30 minutes</option>
+        <option selected>45 minutes</option>
+        <option>60 minutes</option>
+      </select>
+    </div>
+  </div>
+  <div class="choices">
+    <label><input type="checkbox" checked> Include question pool</label>
+    <label><input type="radio" name="demo-type" checked> Multiple choice</label>
+    <label><input type="radio" name="demo-type"> True / False</label>
+  </div>
+
+  <!-- ============ 5. CARD ============ -->
+  <h2>5 — Card</h2>
+  <div class="card">
+    <h3>DBMS Midterm — Fall 2026</h3>
+    <p>20 questions · 45 minutes · 3 attempts allowed · starts 20 Oct, 10:00</p>
+    <div class="card-footer">
+      <button class="btn btn-primary" type="button">Start exam</button>
+      <button class="btn btn-secondary" type="button">View details</button>
+    </div>
+  </div>
+
+  <!-- ============ 6. TABLE ============ -->
+  <h2>6 — Table</h2>
+  <table>
+    <thead>
+      <tr><th>Student</th><th>Status</th><th>Score</th><th>Risk</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Amina Rahman</td><td><span class="badge badge-success">Submitted</span></td><td class="num">17 / 20</td><td><span class="badge badge-success">Low</span></td></tr>
+      <tr><td>Hasib Khan</td><td><span class="badge badge-primary">In progress</span></td><td class="num">—</td><td><span class="badge badge-warning">Medium</span></td></tr>
+      <tr><td>Tanvir Ahmed</td><td><span class="badge badge-danger">Force submitted</span></td><td class="num">9 / 20</td><td><span class="badge badge-danger">High</span></td></tr>
+    </tbody>
+  </table>
+
+  <!-- ============ 7. ALERTS ============ -->
+  <h2>7 — Alerts</h2>
+  <div class="alert alert-info"><div><strong>Tab switch detected</strong><p>This is violation 2 of 3. One more will be reported to your teacher.</p></div></div>
+  <div class="alert alert-success"><div><strong>Answers saved</strong><p>All responses are stored. You can safely continue.</p></div></div>
+  <div class="alert alert-warning"><div><strong>10 minutes left</strong><p>The exam will end automatically when the timer reaches zero.</p></div></div>
+  <div class="alert alert-danger"><div><strong>Fullscreen required</strong><p>The exam cannot continue until you return to fullscreen mode.</p></div></div>
+
+  <!-- ============ 8. BADGES ============ -->
+  <h2>8 — Badges (colour + text, never colour alone)</h2>
+  <div class="row">
+    <span class="badge badge-success">Passed</span>
+    <span class="badge badge-danger">Failed</span>
+    <span class="badge badge-primary">In progress</span>
+    <span class="badge badge-warning">Pending review</span>
+    <span class="badge badge-success">Low</span>
+    <span class="badge badge-warning">Medium</span>
+    <span class="badge badge-danger">High</span>
+  </div>
+
+</div>
+
+<script>
+/* Same behaviour as the app: data-theme on <html>, remembered in localStorage. */
+const toggle = document.getElementById('theme-toggle');
+
+function labelSwatches() {
+  const cs = getComputedStyle(document.documentElement);
+  document.querySelectorAll('[data-token] .swatch-hex').forEach(el => {
+    const token = el.parentElement.dataset.token;
+    el.textContent = cs.getPropertyValue(token).trim().toUpperCase();
+  });
+}
+/* the swatch chips carry their token name in a data attribute */
+document.querySelectorAll('.swatch-chip').forEach(chip => {
+  const name = chip.style.background.match(/--[\w-]+/);
+  if (name) chip.closest('.swatch').querySelector('.swatch-meta').dataset.token = name[0];
+});
+
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  localStorage.setItem('theme', t);
+  toggle.textContent = t === 'dark' ? 'Light mode' : 'Dark mode';
+  labelSwatches();
+}
+toggle.addEventListener('click', () =>
+  applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'));
+
+applyTheme(localStorage.getItem('theme') || 'light');
+</script>
+</body>
+</html>

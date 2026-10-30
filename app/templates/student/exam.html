@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}{{ attempt.exam.title }} · Exam{% endblock %}
+{% block body_class %}exam-mode{% endblock %}
+
+{% block head %}
+<style>
+  /* Exam mode: no selecting, copying or context menu anywhere. */
+  .exam-mode { user-select: none; -webkit-user-select: none; }
+  .exam-mode img, .exam-mode video { pointer-events: none; }
+  .exam-mode textarea { user-select: text; -webkit-user-select: text; }
+</style>
+{% endblock %}
+
+{% block nav %}
+<header class="topbar exam-topbar">
+  <div class="topbar-inner">
+    <span class="brand">🎓 {{ attempt.exam.title }}</span>
+    <div class="exam-hud">
+      {% if attempt.attempt_no > 1 %}
+        <span class="hud-pill" title="Attempt">🔁 {{ attempt.attempt_no }}/{{ attempt.exam.attempts_allowed }}</span>
+      {% endif %}
+      <span id="hud-warnings" class="hud-pill" title="Warnings">
+        🚩 <strong id="warning-count">0</strong>/<span id="warning-limit">{{ attempt.exam.violation_limit }}</span>
+      </span>
+      <span id="hud-timer" class="hud-pill hud-timer">⏱ --:--</span>
+      <span id="hud-progress" class="hud-pill">0/{{ payload.questions|length }}</span>
+    </div>
+  </div>
+</header>
+{% endblock %}
+
+{% block content %}
+<!-- Live alert banner: violations show here, the exam NEVER auto-submits -->
+<div id="alert-banner" class="alert-banner" hidden>
+  <span id="alert-text"></span>
+  <button type="button" id="alert-close" aria-label="Dismiss">✕</button>
+</div>
+
+{% if attempt.exam.require_fullscreen %}
+<div id="fullscreen-overlay" class="fullscreen-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="fs-title">
+  <div class="fullscreen-box">
+    <h2 id="fs-title">🖥 Fullscreen required</h2>
+    <p>This exam must run in fullscreen mode. Leaving fullscreen is recorded
+       as a violation and reported to your teacher.</p>
+    <button class="btn btn-primary" id="btn-fullscreen" type="button">Enter fullscreen</button>
+  </div>
+</div>
+{% endif %}
+
+<div id="webcam-consent" class="fullscreen-overlay" {% if not attempt.exam.webcam_enabled or attempt.webcam_consent %}hidden{% endif %}>
+  <div class="fullscreen-box">
+    <h2>📷 Webcam notice</h2>
+    <p>This exam takes a photo every 45 seconds and checks that exactly one
+       face is visible. Photos are stored for your teacher's report and
+       deleted after {{ config.SNAPSHOT_RETENTION_DAYS }} days. Video never
+       leaves your browser — only these photos are sent.</p>
+    <label class="consent-check">
+      <input type="checkbox" id="consent-check" aria-describedby="consent-error"> I allow webcam snapshots
+    </label>
+    <div class="actions-row">
+      <button class="btn btn-primary" id="btn-consent" type="button" disabled>Continue to exam</button>
+      <button class="btn btn-ghost" id="btn-refuse" type="button">Refuse webcam</button>
+    </div>
+    <p class="muted" id="consent-error" style="color:#f66" hidden>Camera access is
+      required for this exam — ask your teacher if you cannot allow it.</p>
+  </div>
+</div>
+
+{% if payload.one_at_a_time %}
+<div id="intro-overlay" class="fullscreen-overlay" hidden>
+  <div class="fullscreen-box">
+    <h2>📋 One question at a time</h2>
+    <p>This exam shows one question at a time and you cannot go back —
+       answer carefully before pressing Next.</p>
+    <button class="btn btn-primary" id="btn-begin" type="button">Begin</button>
+  </div>
+</div>
+{% endif %}
+
+<div class="exam-layout">
+  <section class="exam-questions" id="questions">
+    {% for q in payload.questions %}
+    <article class="card question-card" data-question-id="{{ q.id }}"
+             data-position="{{ q.position }}" data-type="{{ q.type }}"
+             data-flagged="{{ 'true' if q.flagged else 'false' }}"
+             {% if payload.one_at_a_time %}hidden{% endif %}>
+      <h3>
+        <span class="q-number">{{ q.position }}.</span> {{ q.text }}
+        {% if q.points > 1 %}<span class="badge">{{ q.points }} pts</span>{% endif %}
+        <button type="button" class="flag-btn {{ 'is-flagged' if q.flagged }}"
+                data-question-id="{{ q.id }}"
+                aria-label="{% if q.flagged %}Unflag question {{ q.position }}{% else %}Flag question {{ q.position }} for review{% endif %}"
+                aria-pressed="{{ 'true' if q.flagged else 'false' }}"
+                title="{% if q.flagged %}Unflag question {{ q.position }}{% else %}Flag question {{ q.position }} for review{% endif %}">🚩</button>
+      </h3>
+
+      {% if q.type in ('mcq', 'true_false', 'multi') %}
+      <div class="options" role="radiogroup" aria-label="Question {{ q.position }} options">
+        {% for opt in q.options %}
+        <label class="option" data-display-index="{{ loop.index0 }}">
+          <input type="{{ 'checkbox' if q.type == 'multi' else 'radio' }}"
+                 name="q{{ q.id }}" value="{{ loop.index0 }}"
+                 aria-label="{{ opt }}">
+          <span>{{ opt }}</span>
+        </label>
+        {% endfor %}
+      </div>
+
+      {% else %}
+      <div class="text-answer">
+        <label for="answer-{{ q.id }}" class="muted small">Your answer</label>
+        <textarea id="answer-{{ q.id }}"
+                  data-question-id="{{ q.id }}"
+                  data-word-limit="{{ q.word_limit }}"
+                  placeholder="{% if q.type == 'short_text' %}Type your short answer…{% else %}Type your answer here… (about {{ q.word_limit }} words){% endif %}"
+                  rows="{% if q.type == 'short_text' %}2{% else %}8{% endif %}">{{ q.response }}</textarea>
+        <span class="word-counter muted" data-for="{{ q.id }}">0 / {{ q.word_limit }} words</span>
+      </div>
+      {% endif %}
+    </article>
+    {% endfor %}
+
+    {% if payload.one_at_a_time %}
+    <div class="card navigator-nav" id="one-nav" hidden>
+      <button class="btn" id="btn-prev" type="button">← Previous</button>
+      <span id="one-progress" class="muted"></span>
+      <button class="btn btn-primary" id="btn-next" type="button">Next →</button>
+    </div>
+    {% endif %}
+
+    <div class="card submit-card">
+      <p class="muted">Answers are saved automatically. The timer is checked
+        by the server — refreshing will not add time.</p>
+      <button class="btn btn-primary btn-big" id="btn-submit" type="button">
+        ✅ Submit exam
+      </button>
+      <p class="muted" id="save-status">All changes saved.</p>
+    </div>
+  </section>
+
+  <aside class="exam-sidebar">
+    <div class="card side-card">
+      <h3>Time left</h3>
+      <div class="big-timer" id="timer">--:--</div>
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      <p class="muted" id="sync-status">Synced with server ✓</p>
+    </div>
+
+    <div class="card side-card" {% if payload.one_at_a_time %}hidden{% endif %}>
+      <h3>Question navigator</h3>
+      <div class="navigator-grid" id="navigator" role="list" aria-label="Questions">
+        {% for q in payload.questions %}
+        <button type="button" class="nav-dot {{ 'is-flagged' if q.flagged }}"
+                data-target="{{ q.position }}"
+                role="listitem"
+                aria-label="Question {{ q.position }}{% if q.answered %}, answered{% endif %}{% if q.flagged %}, flagged{% endif %}"
+                aria-current="{% if q.position == 1 %}true{% else %}false{% endif %}"
+                >{{ q.position }}</button>
+        {% endfor %}
+      </div>
+      <p class="muted small">🟦 answered · 🚩 flagged for review</p>
+    </div>
+
+    <div class="card side-card" id="webcam-card" {% if not attempt.exam.webcam_enabled %}hidden{% endif %}>
+      <h3>Camera</h3>
+      <video id="webcam" autoplay muted playsinline></video>
+      <p class="muted" id="webcam-status">Camera starting…</p>
+    </div>
+
+    <div class="card side-card" id="rules-card">
+      <h3>Exam rules</h3>
+      <ul class="rules-list">
+        <li>Tab switches &amp; focus loss are recorded</li>
+        <li>Copy / paste &amp; right-click are blocked</li>
+        <li>Fullscreen must stay on</li>
+        <li>Warnings are sent to your teacher live</li>
+      </ul>
+      <p class="muted small">Exams are never closed automatically — your
+        teacher reviews every warning before deciding.</p>
+    </div>
+  </aside>
+</div>
+
+<div id="teacher-messages" class="teacher-messages">
+  {% for m in payload.messages %}
+    <div class="tmsg tmsg-{{ m.kind }}">{{ m.body }}</div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  window.EXAM_PAYLOAD = {{ payload|tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/exam.js') }}"></script>
+{% endblock %}

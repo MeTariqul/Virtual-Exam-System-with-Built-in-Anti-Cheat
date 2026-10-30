@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}History · Virtual Exam System{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Exam history</h1>
+  <a class="btn" href="{{ url_for('student.history_csv') }}">⬇ Export CSV</a>
+</div>
+
+<div class="card">
+  {% if not attempts %}
+    <p class="muted">You have not taken any exams yet.</p>
+  {% else %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Exam</th><th>Started</th><th>Submitted</th>
+        <th>Score</th><th>Warnings</th><th>Risk</th><th>Status</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in attempts %}
+      <tr>
+        <td>
+          {{ a.exam.title }}
+          {% if a.attempt_no > 1 %}
+            <span class="muted small">(attempt {{ a.attempt_no }})</span>
+          {% endif %}
+        </td>
+        <td>{{ a.started_at|dt }}</td>
+        <td>{{ a.submitted_at|dt }}</td>
+        <td>
+          {% if a.score is not none %}
+            {{ a.score|marks }}/{{ a.total|marks }}{% if percents[a.id] is not none %} · {{ percents[a.id]|pct }}%{% endif %}
+          {% else %}—{% endif %}
+        </td>
+        <td>{{ a.warning_count }}</td>
+        <td>
+          {% if a.risk_level %}
+            <span class="badge badge-risk-{{ a.risk_level }}">{{ a.risk_level }} ({{ a.risk_score }})</span>
+          {% else %}—{% endif %}
+        </td>
+        <td><span class="badge badge-{{ a.status }}">{{ a.status|label }}</span></td>
+        <td>
+          {% if a.status == 'submitted' %}
+            <a href="{{ url_for('student.result', attempt_id=a.id) }}">result</a>
+          {% else %}
+            <a href="{{ url_for('student.take_exam', attempt_id=a.id) }}">continue</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

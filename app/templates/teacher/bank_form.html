@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "teacher/_question_fields.html" import fields %}
+{% block title %}New bank question · Question bank{% endblock %}
+
+{% block head %}
+<script src="{{ url_for('static', filename='js/question-form.js') }}" defer></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>New question for your bank</h1>
+  <div>
+    <a class="btn" href="{{ url_for('teacher.question_bank') }}">← Question bank</a>
+    <a class="btn" href="{{ url_for('teacher.dashboard') }}">My exams</a>
+  </div>
+</div>
+
+<p class="muted">A standalone question belongs to no exam yet: tick it in the
+   “From your question bank” list when you create an exam, or copy it into one
+   of your exams straight from the bank page.</p>
+
+<form method="post" class="card stack form-wide" data-qblock>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+  {{ fields('', categories, form, true) }}
+
+  <div class="actions-row">
+    <button class="btn btn-primary" type="submit">Add to bank</button>
+    <a class="btn btn-ghost" href="{{ url_for('teacher.question_bank') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

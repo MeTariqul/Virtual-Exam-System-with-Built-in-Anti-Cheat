@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Profile · Virtual Exam System{% endblock %}
+
+{% block content %}
+<h1>Your profile</h1>
+
+<div class="profile-grid">
+  <div class="card stack">
+    <h2>Account</h2>
+    <p><strong>Username:</strong> {{ current_user.username }}</p>
+    <p><strong>Role:</strong>
+      <em class="badge badge-{{ current_user.role }}">{{ current_user.role }}</em>
+    </p>
+    <p><strong>Member since:</strong> {{ current_user.created_at|dt }}</p>
+
+    <form method="post" class="stack">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="action" value="save">
+      <label>Full name
+        <input type="text" name="full_name" maxlength="120"
+               value="{{ current_user.full_name }}">
+      </label>
+      <label>Email
+        <input type="email" name="email" maxlength="120"
+               value="{{ current_user.email or '' }}">
+      </label>
+      <button class="btn btn-primary" type="submit">Save profile</button>
+    </form>
+  </div>
+
+  <div class="card stack">
+    <h2>Profile photo</h2>
+    <p class="muted">Used by your teacher for the identity check
+       (compared with the photo taken at the start of an exam).</p>
+    <div class="photo-preview">
+      {% if current_user.photo_path %}
+        <img src="{{ url_for('auth.avatar', user_id=current_user.id) }}" alt="Profile photo">
+      {% else %}
+        <span class="avatar avatar-big">👤</span>
+      {% endif %}
+    </div>
+    <form method="post" enctype="multipart/form-data" class="stack">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="action" value="photo">
+      <label>Photo (JPEG/PNG, max 2 MB)
+        <input type="file" name="photo" accept="image/jpeg,image/png,image/webp">
+      </label>
+      <button class="btn" type="submit">Upload photo</button>
+    </form>
+  </div>
+
+  <div class="card stack">
+    <h2>Change password</h2>
+    <form method="post" class="stack">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="action" value="password">
+      <label>Current password
+        <input type="password" name="current_password" required
+               autocomplete="current-password">
+      </label>
+      <label>New password
+        <input type="password" name="new_password" required minlength="6"
+               autocomplete="new-password">
+      </label>
+      <label>Confirm new password
+        <input type="password" name="confirm_password" required
+               autocomplete="new-password">
+      </label>
+      <button class="btn" type="submit">Change password</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% from "teacher/_question_fields.html" import fields %}
+{% block title %}Questions · {{ exam.title }}{% endblock %}
+
+{% block head %}
+<script src="{{ url_for('static', filename='js/question-form.js') }}" defer></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Questions — {{ exam.title }}</h1>
+  <div>
+    <a class="btn" href="{{ url_for('teacher.exam_resources', exam_id=exam.id) }}">📚 Resources (RAG)</a>
+    <a class="btn" href="{{ url_for('teacher.exam_edit', exam_id=exam.id) }}">Exam settings</a>
+    <a class="btn" href="{{ url_for('teacher.dashboard') }}">← My exams</a>
+  </div>
+</div>
+
+<div class="two-col">
+  <section class="card">
+    <h2>Add question</h2>
+    <form method="post" class="stack" data-qblock>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+      {{ fields('', categories, values, true) }}
+
+      <button class="btn btn-primary" type="submit">Add question</button>
+    </form>
+
+    <hr>
+    <h3>CSV import</h3>
+    <p class="muted small">Columns: <code>text,type,options,correct,model_answer,rubric,points,category,difficulty</code>
+       — options separated by <code>|</code>. For mcq/multi, <code>correct</code> holds
+       option texts (multi: separated by <code>|</code>) or 0-based indexes.</p>
+    <form method="post" action="{{ url_for('teacher.questions_import_csv', exam_id=exam.id) }}"
+          enctype="multipart/form-data" class="form-row">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="file" name="file" accept=".csv,text/csv" required>
+      <button class="btn" type="submit">⬆ Import CSV</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>{{ exam.questions|length }} question(s) in the bank</h2>
+    {% if not exam.questions %}
+      <p class="muted">No questions yet. Students cannot start until you add one.</p>
+    {% else %}
+    <ol class="question-bank">
+      {% for q in exam.questions %}
+      <li>
+        <div class="qb-head">
+          <strong>{{ q.text }}</strong>
+          <span class="badge" title="{{ q.label }}">{{ q.label }}</span>
+          {% if q.category %}<span class="badge">{{ q.category.name }}</span>{% endif %}
+          {% if q.difficulty %}<span class="badge">{{ q.difficulty }}</span>{% endif %}
+          <form method="post"
+                action="{{ url_for('teacher.question_delete', question_id=q.id) }}"
+                onsubmit="return confirm('Delete this question?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-sm btn-danger" type="submit">✕</button>
+          </form>
+        </div>
+        {% if q.options %}
+        <ul class="qb-options">
+          {% for opt in q.options %}
+          <li class="{{ 'qb-correct' if (loop.index0 == q.correct_index or loop.index0 in (q.correct_indices or [])) else '' }}">
+            {{ 'ABCD'[loop.index0] if loop.index0 < 4 else '?' }}. {{ opt }}
+            {{ '✔' if (loop.index0 == q.correct_index or loop.index0 in (q.correct_indices or [])) else '' }}
+          </li>
+          {% endfor %}
+        </ul>
+        {% elif q.model_answer %}
+        <p class="muted small">Model answer: {{ q.model_answer }}</p>
+        {% endif %}
+        <span class="muted small">{{ q.points }} pt
+          {% if q.rubric %}· rubric: {{ q.rubric.splitlines()|length }} point(s){% endif %}
+        </span>
+      </li>
+      {% endfor %}
+    </ol>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

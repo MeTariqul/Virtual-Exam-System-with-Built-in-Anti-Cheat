@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Resources · {{ exam.title }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Resources (RAG) — {{ exam.title }}</h1>
+  <div>
+    <a class="btn" href="{{ url_for('teacher.exam_questions', exam_id=exam.id) }}">Questions</a>
+    <a class="btn" href="{{ url_for('teacher.dashboard') }}">← My exams</a>
+  </div>
+</div>
+
+<div class="two-col">
+  <section class="card stack">
+    <h2>Add material</h2>
+    <p class="muted small">Resource PDFs or notes are chunked, embedded and
+       retrieved during AI marking, so marks stay tied to your course
+       material (RAG).</p>
+    <form method="post" enctype="multipart/form-data" class="stack">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>Title
+        <input type="text" name="title" maxlength="200"
+               placeholder="e.g. Chapter 3 notes">
+      </label>
+      <label>PDF file
+        <input type="file" name="file" accept="application/pdf">
+      </label>
+      <label>…or type notes directly
+        <textarea name="notes" rows="6"
+                  placeholder="Paste lecture notes or an answer key"></textarea>
+      </label>
+      <button class="btn btn-primary" type="submit">⬆ Add &amp; process</button>
+    </form>
+
+    <hr>
+    <h3>AI engine status</h3>
+    <ul class="meta-list small">
+      <li>OCR: <strong>{{ engines.ocr.engine }}</strong>
+        <span class="muted">({{ engines.ocr.model }} · renderer {{ engines.ocr.pdf_renderer }})</span></li>
+      <li>Embeddings: <strong>{{ engines.embeddings.engine }}</strong>
+        <span class="muted">(store: {{ engines.embeddings.vector_store }})</span></li>
+      <li>Marking: <strong>{{ engines.marking.engine }}</strong>
+        <span class="muted">({{ engines.marking.model }} ·
+          {{ 'Ollama up ✓' if engines.marking.ollama_up else 'Ollama not reachable — mock marks' }})</span></li>
+      {% if engines.force_mock %}
+        <li><span class="badge badge-risk-medium">mock mode forced (EXAM_AI_MOCK=1)</span></li>
+      {% endif %}
+    </ul>
+
+    {% if jobs %}
+    <h3>Recent jobs</h3>
+    <ul class="meta-list small">
+      {% for job in jobs %}
+        <li>#{{ job.id }} {{ job.kind|label }} — <span class="badge">{{ job.status|label }}</span>
+          {% if job.error %}<span class="text-danger">{{ job.error[:120] }}</span>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>{{ exam.resources|length }} resource(s)</h2>
+    {% if not exam.resources %}
+      <p class="muted">No material yet. AI marking still works with model
+         answers and rubrics — resources make retrieval smarter.</p>
+    {% else %}
+    <ul class="question-bank">
+      {% for r in exam.resources %}
+      <li>
+        <div class="qb-head">
+          <strong>{{ r.title }}</strong>
+          <span class="badge badge-{{ 'open' if r.status == 'ready' else ('risk-high' if r.status == 'failed' else 'medium') }}">
+            {{ r.status|label }}
+          </span>
+          <form method="post"
+                action="{{ url_for('teacher.resource_delete', resource_id=r.id) }}"
+                onsubmit="return confirm('Delete this resource and its chunks?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-sm btn-danger" type="submit">✕</button>
+          </form>
+        </div>
+        <span class="muted small">{{ r.chunks|length }} chunk(s) · added {{ r.created_at|dt }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

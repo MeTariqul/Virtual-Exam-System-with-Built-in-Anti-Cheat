@@ -1,0 +1,91 @@
+/* ============================================================
+   theme.css — DESIGN TOKENS ONLY. No component styles here.
+   Values come from the confirmed DESIGN BRIEF (light + dark).
+   The rest of the UI (base.css, components.css) uses these
+   variables and never hard-codes a colour.
+   ============================================================ */
+
+:root {
+  /* ---- surfaces (light theme) ---- */
+  --bg: #f6f7f9;          /* page background */
+  --surface: #ffffff;     /* cards, panels */
+  --surface-2: #eef1f5;   /* table headers, subtle fills */
+
+  /* ---- lines & text ---- */
+  --border: #d9dee6;        /* decorative borders and dividers */
+  --border-strong: #7e8798; /* input/control boundaries (meets 3:1 UI contrast) */
+  --text: #1b2430;          /* headings and body text */
+  --text-muted: #5a6575;    /* captions, meta, placeholders */
+
+  /* ---- brand ---- */
+  --primary: #2454c6;         /* links, primary buttons, active nav */
+  --primary-hover: #1b4299;   /* hover / pressed */
+  --accent: #0e7c86;          /* focus rings, secondary highlights */
+
+  /* ---- status ---- */
+  --success: #1a6e44;   /* passed, correct, submitted (darkened for AA on tinted badges) */
+  --warning: #9c5b00;   /* warnings, expiring timer (darkened for AA on white) */
+  --danger: #c0342b;    /* violations, failed, errors */
+
+  /* ---- risk levels (always paired with a text label) ---- */
+  --risk-low: #1a6e44;
+  --risk-medium: #9c5b00;
+  --risk-high: #c0342b;
+
+  /* ---- text that sits ON a filled primary/danger surface ---- */
+  --on-primary: #ffffff;  /* white on the blue button = 6.65:1 */
+  --on-danger: #ffffff;   /* white on red button = 5.57:1 */
+
+  /* ---- shape (from brief: one radius for cards, one for controls) ---- */
+  --radius-card: 10px;
+  --radius-control: 8px;
+
+  /* ---- one shadow style only ---- */
+  --shadow: 0 1px 2px rgba(16,24,40,.06);
+
+  /* ---- spacing scale: 4 / 8 / 12 / 16 / 24 / 32 / 48 ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* ---- type (Inter with full system fallback, so the app
+          still looks right with no internet) ---- */
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas,
+               "Courier New", monospace;
+}
+
+/* ---- dark theme: same tokens, darker values ---- */
+html[data-theme="dark"] {
+  --bg: #12151a;
+  --surface: #1a1f27;
+  --surface-2: #222935;
+
+  --border: #2c3440;
+  --border-strong: #6b7789; /* input boundaries in dark mode (3.64:1 on surface) */
+  --text: #e7ebf1;
+  --text-muted: #9aa5b4;
+
+  --primary: #6e9bff;
+  --primary-hover: #8cb1ff;
+  --accent: #49c2ce;
+
+  /* Dark primary/danger are LIGHT colours, so their labels go dark */
+  --on-primary: #12151a;  /* 6.79:1 on --primary, 8.58:1 on hover */
+  --on-danger: #12151a;   /* 5.72:1 on --danger */
+
+  --success: #4cc38a;
+  --warning: #e0a63c;
+  --danger: #f07167;
+
+  --risk-low: #4cc38a;
+  --risk-medium: #e0a63c;
+  --risk-high: #f07167;
+
+  --shadow: 0 1px 2px rgba(0,0,0,.45);
+}

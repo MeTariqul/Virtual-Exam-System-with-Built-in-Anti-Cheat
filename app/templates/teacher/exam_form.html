@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% from "teacher/_question_fields.html" import fields %}
+{% block title %}{{ 'Edit exam' if exam else 'New exam' }} · Virtual Exam System{% endblock %}
+
+{% block head %}
+<script src="{{ url_for('static', filename='js/question-form.js') }}" defer></script>
+{% endblock %}
+
+{% block content %}
+<h1>{{ 'Edit: ' + exam.title if exam else 'Create exam' }}</h1>
+
+<form method="post" class="card stack form-wide">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+  <label>Title *
+    <input type="text" name="title" required maxlength="200"
+           value="{{ form.get('title', '') }}">
+  </label>
+
+  <label>Instructions for students
+    <textarea name="description" rows="2"
+              placeholder="Shown on the exam card before the student starts">{{ form.get('description', '') }}</textarea>
+  </label>
+
+  <div class="form-row">
+    <label>Duration (minutes) *
+      <input type="number" name="duration_minutes" min="1" max="480"
+             value="{{ form.get('duration_minutes', 30) }}">
+    </label>
+    <label>Violation limit (warnings) *
+      <input type="number" name="violation_limit" min="1" max="50"
+             value="{{ form.get('violation_limit', 3) }}">
+    </label>
+    <label>Questions per student (0 = all)
+      <input type="number" name="pool_size" min="0"
+             value="{{ form.get('pool_size', 0) }}">
+    </label>
+  </div>
+
+  <div class="form-row">
+    <label>Pass mark (%)
+      <input type="number" name="pass_mark" min="0" max="100"
+             value="{{ form.get('pass_mark', 40) }}">
+    </label>
+    <label>Attempts allowed
+      <input type="number" name="attempts_allowed" min="1" max="5"
+             value="{{ form.get('attempts_allowed', 1) }}">
+    </label>
+    <label>Access code (optional)
+      <input type="text" name="access_code" maxlength="12"
+             value="{{ form.get('access_code', '') }}"
+             placeholder="none">
+    </label>
+  </div>
+
+  <div class="form-row">
+    <label>Grace seconds after time-up
+      <input type="number" name="grace_seconds" min="0" max="120"
+             value="{{ form.get('grace_seconds', 5) }}">
+    </label>
+    <label>Handwritten upload window (min, 0 = off)
+      <input type="number" name="upload_window_minutes" min="0" max="1440"
+             value="{{ form.get('upload_window_minutes', 0) }}">
+    </label>
+    <label>&nbsp;</label>
+  </div>
+
+  <div class="form-row">
+    <label>Opens
+      <input type="datetime-local" name="scheduled_start"
+             value="{{ form.get('scheduled_start', '') }}">
+    </label>
+    <label>Closes
+      <input type="datetime-local" name="scheduled_end"
+             value="{{ form.get('scheduled_end', '') }}">
+    </label>
+  </div>
+
+  <fieldset class="check-group">
+    <legend>Anti-cheat settings</legend>
+    <label class="check">
+      <input type="checkbox" name="shuffle_questions"
+             {{ 'checked' if form.get('shuffle_questions', true) else '' }}>
+      Shuffle question order per student
+    </label>
+    <label class="check">
+      <input type="checkbox" name="shuffle_options"
+             {{ 'checked' if form.get('shuffle_options', true) else '' }}>
+      Shuffle option order per student
+    </label>
+    <label class="check">
+      <input type="checkbox" name="require_fullscreen"
+             {{ 'checked' if form.get('require_fullscreen', true) else '' }}>
+      Require fullscreen
+    </label>
+    <label class="check">
+      <input type="checkbox" name="webcam_enabled"
+             {{ 'checked' if form.get('webcam_enabled', false) else '' }}>
+      Webcam snapshots + face check (every 45s)
+    </label>
+    <label class="check">
+      <input type="checkbox" name="negative_marking"
+             {{ 'checked' if form.get('negative_marking', false) else '' }}>
+      Negative marking (−25% per wrong MCQ)
+    </label>
+    <label class="check">
+      <input type="checkbox" name="one_at_a_time"
+             {{ 'checked' if form.get('one_at_a_time', false) else '' }}>
+      One-question-at-a-time mode (no going back)
+    </label>
+    <label class="check">
+      <input type="checkbox" name="show_result"
+             {{ 'checked' if form.get('show_result', true) else '' }}>
+      Show result to students right after submission
+    </label>
+    <label class="check">
+      <input type="checkbox" name="is_published"
+             {{ 'checked' if form.get('is_published', false) else '' }}>
+      Publish immediately (visible to students)
+    </label>
+  </fieldset>
+
+  {% if not exam %}
+  <hr>
+
+  <h2>Select or write questions</h2>
+  <p class="muted small">Tick questions from your bank — they are <strong>copied</strong>
+     into the new exam, your originals stay untouched — and/or write fresh ones below.
+     You can always add more later from the exam's Questions page.</p>
+
+  <fieldset class="check-group">
+    <legend>From your question bank</legend>
+    {% if bank_questions %}
+    <div class="form-row">
+      <label class="grow">Filter the list
+        <input type="search" id="bank-filter" autocomplete="off"
+               placeholder="type a keyword, topic or category…">
+      </label>
+      <span class="muted small bank-count" id="bank-count"></span>
+    </div>
+    <div class="bank-select" id="bank-list">
+      {% for q in bank_questions %}
+      <label class="check bank-item"
+             data-search="{{ (q.text ~ ' ' ~ (q.category.name if q.category else '')
+                              ~ ' ' ~ q.label)|lower }}">
+        <input type="checkbox" name="bank_ids" value="{{ q.id }}"
+               {{ 'checked' if q.id in selected_bank else '' }}>
+        <span class="bank-item-body grow">
+          <span>{{ q.text[:140] }}</span>
+          <span class="muted small">{{ q.label }} · {{ q.points }} pt
+            {%- if q.category %} · {{ q.category.name }}{% endif %}
+            {%- if q.exam %} · from {{ q.exam.title[:60] }}{% else %} · standalone{% endif %}
+          </span>
+        </span>
+      </label>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted small">Your question bank is empty — write the first questions
+       below, they will be saved with this exam and stay reusable afterwards.</p>
+    {% endif %}
+  </fieldset>
+
+  <h3>New questions for this exam</h3>
+  <p class="muted small">A block you leave completely empty is simply skipped.</p>
+
+  <div class="q-blocks" id="q-blocks">
+    {% set qblocks = blocks if blocks else [{}] %}
+    {% for block in qblocks %}
+    {% set prefix = 'q_' ~ loop.index0 ~ '_' %}
+    <div class="q-block" data-qblock data-qidx="{{ loop.index0 }}">
+      <div class="q-block-head">
+        <strong>Question <span data-qnum>{{ loop.index }}</span></strong>
+        <button type="button" class="btn btn-sm btn-ghost" data-remove-block
+                title="Remove this question">✕ Remove</button>
+      </div>
+      {{ fields(prefix, categories, block) }}
+    </div>
+    {% endfor %}
+  </div>
+
+  <template id="q-template">
+    <div class="q-block" data-qblock data-qidx="0">
+      <div class="q-block-head">
+        <strong>Question <span data-qnum>1</span></strong>
+        <button type="button" class="btn btn-sm btn-ghost" data-remove-block
+                title="Remove this question">✕ Remove</button>
+      </div>
+      {{ fields('q_0_', categories) }}
+    </div>
+  </template>
+
+  <div class="actions-row">
+    <button class="btn" type="button" id="q-add">＋ Add question</button>
+  </div>
+  {% endif %}
+
+  <div class="actions-row">
+    <button class="btn btn-primary" type="submit">
+      {{ 'Save changes' if exam else 'Create exam' }}
+    </button>
+    <a class="btn btn-ghost" href="{{ url_for('teacher.dashboard') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Error {{ code }} · Virtual Exam System{% endblock %}
+{% block content %}
+<div class="card narrow center">
+  <h1>{{ code }}</h1>
+  <p>{{ message }}</p>
+  <a class="btn btn-primary" href="/">Back home</a>
+</div>
+{% endblock %}

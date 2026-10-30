@@ -1,0 +1,15 @@
+{
+  "dependencies": {
+    "omniroute": "^3.8.49"
+  },
+  "allowScripts": {
+    "@parcel/watcher@2.6.0": true,
+    "@swc/core@1.16.20": true,
+    "better-sqlite3@13.0.3": true,
+    "esbuild@0.28.2": true,
+    "keytar@7.9.0": true,
+    "omniroute@3.8.52": true,
+    "onnxruntime-node@1.30.0": true,
+    "protobufjs@7.6.6": true
+  }
+}

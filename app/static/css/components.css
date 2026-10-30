@@ -1,0 +1,437 @@
+/* ============================================================
+   components.css — shared components: buttons, forms, cards,
+   tables, badges, toasts, modal. Loaded AFTER style.css and
+   extra.css, so equal-specificity rules here win.
+
+   Wherever legacy ships an `html[data-theme="dark"] …` override
+   (higher specificity than a plain class rule), this file pairs
+   each selector with its dark twin in the same comma list so the
+   new values win in both themes.
+
+   Every colour comes from theme.css tokens; tints are built with
+   color-mix() — no hard-coded hexes (except neutral scrims).
+   ============================================================ */
+
+/* ============================================================
+   1. BUTTONS
+   ============================================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-sans);
+  font-size: .9375rem;   /* 15px, per style tile */
+  font-weight: 500;
+  line-height: 1;
+  border: 1px solid var(--border-strong); /* control boundary: 3.62:1 / 3.64:1 */
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: none;                 /* one shadow style: none on buttons */
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+
+/* Hover: no lift, no glow (legacy translateY + big shadow removed) */
+.btn:hover,
+html[data-theme="dark"] .btn:hover {
+  transform: none;
+  box-shadow: none;
+  filter: none;
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.btn:active {
+  transform: none;
+  box-shadow: none;
+  background: var(--surface-2);
+}
+
+/* Primary — solid brand fill, label uses --on-primary (6.65:1 / 6.79:1) */
+.btn-primary,
+html[data-theme="dark"] .btn-primary {
+  background: var(--primary);
+  border-color: transparent;
+  color: var(--on-primary);
+  box-shadow: none;
+}
+.btn-primary:hover,
+html[data-theme="dark"] .btn-primary:hover {
+  transform: none;
+  box-shadow: none;
+  filter: none;
+  background: var(--primary-hover);
+  border-color: transparent;
+  color: var(--on-primary);
+}
+
+/* Danger — solid red fill, label uses --on-danger (5.57:1 / 6.33:1) */
+.btn-danger,
+html[data-theme="dark"] .btn-danger {
+  background: var(--danger);
+  border-color: transparent;
+  color: var(--on-danger);
+  box-shadow: none;
+}
+.btn-danger:hover,
+html[data-theme="dark"] .btn-danger:hover {
+  transform: none;
+  box-shadow: none;
+  filter: none;
+  background: color-mix(in srgb, var(--danger) 88%, #000000);
+  border-color: transparent;
+  color: var(--on-danger);
+}
+
+/* Ghost — quiet actions (top bar, modal cancel) */
+.btn-ghost,
+html[data-theme="dark"] .btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-muted);
+  box-shadow: none;
+}
+.btn-ghost:hover,
+html[data-theme="dark"] .btn-ghost:hover {
+  transform: none;
+  box-shadow: none;
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* Sizes — still one control radius */
+.btn-sm {
+  padding: var(--space-2) var(--space-3);
+  font-size: .8125rem;
+  border-radius: var(--radius-control);
+}
+.btn-big {
+  padding: var(--space-4) var(--space-6);
+  font-size: 1rem;
+  width: 100%;
+  border-radius: var(--radius-control);
+}
+
+/* Disabled / busy — never colour alone: pointer + opacity state */
+.btn:disabled,
+.btn[disabled],
+.btn[aria-busy="true"] {
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Text-only button (style tile) */
+.btn-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--primary);
+  font: 500 .9375rem/1.55 var(--font-sans);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.btn-link:hover { color: var(--primary-hover); }
+
+/* ============================================================
+   2. FORMS
+   ============================================================ */
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+input[type="text"], input[type="password"], input[type="number"],
+input[type="email"], input[type="datetime-local"], input[type="date"],
+textarea, select {
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: .9375rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong); /* fix #4: control boundary meets 3:1 */
+  border-radius: var(--radius-control);
+  padding: 10px 12px;
+  transition: border-color .15s ease;
+}
+
+/* Focus: accent border + the accent focus ring from base.css.
+   (Kills legacy purple --brand border and --ring glow.) */
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: none;
+}
+
+/* ---------- validation states ----------
+   Legacy (extra.css) turned every untouched required field RED on
+   page load, because these auth inputs have no placeholder attribute
+   so :not(:placeholder-shown) always matched. Rules here are more
+   specific and load later, so: neutral until the user actually
+   enters something invalid (:user-invalid), then danger. */
+input:invalid:not(:placeholder-shown):not(:user-invalid),
+textarea:invalid:not(:placeholder-shown):not(:user-invalid),
+select:invalid:not(:placeholder-shown):not(:user-invalid) {
+  border-color: var(--border-strong);
+  box-shadow: none;
+}
+input:user-invalid, textarea:user-invalid, select:user-invalid {
+  border-color: var(--danger);
+  box-shadow: none;
+}
+/* Tie-break the legacy (0,2,1) invalid rule: keep its red border for
+   edited-but-invalid fields, but never its hard-coded red ring. */
+input:invalid:not(:placeholder-shown),
+textarea:invalid:not(:placeholder-shown),
+select:invalid:not(:placeholder-shown) {
+  border-color: var(--danger);
+  box-shadow: none;
+}
+input:focus:valid, textarea:focus:valid, select:focus:valid,
+input:focus:invalid:not(:placeholder-shown):not(:user-invalid),
+textarea:focus:invalid:not(:placeholder-shown):not(:user-invalid),
+select:focus:invalid:not(:placeholder-shown):not(:user-invalid) {
+  border-color: var(--accent);
+  box-shadow: none;
+}
+
+input::placeholder, textarea::placeholder,
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* Checkbox / radio: one accent colour everywhere */
+input[type="checkbox"], input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+.check input { accent-color: var(--primary); }
+.option-row input[type="radio"] { accent-color: var(--primary); }
+
+/* ============================================================
+   3. CARDS
+   ============================================================ */
+
+.card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow);
+  padding: var(--space-5);
+  margin-bottom: var(--space-4);
+}
+
+/* Legacy dark rules set --ink on cards; retokenise to --text */
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .auth-card,
+html[data-theme="dark"] .topbar { color: var(--text); }
+
+.card-warn { border-left: 4px solid var(--warning); }
+
+/* ============================================================
+   4. TABLES
+   ============================================================ */
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 15px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.table th, .table td {
+  text-align: left;
+  vertical-align: middle;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.table th {
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: none;      /* legacy shouted in uppercase */
+  letter-spacing: normal;
+  border-bottom: 1px solid var(--border);
+}
+html[data-theme="dark"] .table th { background: var(--surface-2); }
+
+.table thead th:first-child { border-top-left-radius: calc(var(--radius-card) - 1px); }
+.table thead th:last-child  { border-top-right-radius: calc(var(--radius-card) - 1px); }
+
+.table tbody tr { transition: background .15s ease; }
+.table tbody tr:hover { background: var(--surface-2); }   /* legacy: purple brand tint */
+.table tr:last-child td { border-bottom: none; }
+
+/* Key/value tables are static — keep them hover-free (legacy intent) */
+.kv-table tbody tr:hover { background: transparent; }
+
+/* ============================================================
+   5. BADGES — colour AND text, never colour alone
+   (all pairs measured ≥ 4.5:1 on their tinted background)
+   ============================================================ */
+
+.badge,
+html[data-theme="dark"] .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  font-style: normal;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  vertical-align: middle;
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+.badge::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+/* success family — 5.27:1 light / 5.99:1 dark */
+.badge-success, .badge-open, .badge-submitted,
+.badge-student, .badge-risk-low,
+html[data-theme="dark"] .badge-success, html[data-theme="dark"] .badge-open,
+html[data-theme="dark"] .badge-submitted, html[data-theme="dark"] .badge-student,
+html[data-theme="dark"] .badge-risk-low {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 12%, var(--surface));
+}
+
+/* primary family — 5.53:1 light / 5.06:1 dark */
+.badge-primary, .badge-in_progress, .badge-scheduled, .badge-admin,
+html[data-theme="dark"] .badge-primary, html[data-theme="dark"] .badge-in_progress,
+html[data-theme="dark"] .badge-scheduled, html[data-theme="dark"] .badge-admin {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+}
+
+/* warning family — 4.54:1 light / 6.15:1 dark */
+.badge-warning, .badge-risk-medium,
+html[data-theme="dark"] .badge-warning, html[data-theme="dark"] .badge-risk-medium {
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 12%, var(--surface));
+}
+
+/* danger family — 4.65:1 light / 4.83:1 dark */
+.badge-danger, .badge-risk-high,
+html[data-theme="dark"] .badge-danger, html[data-theme="dark"] .badge-risk-high {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+}
+
+/* neutral family — 5.22:1 light / 5.86:1 dark */
+.badge-closed, .badge-draft, .badge-teacher,
+html[data-theme="dark"] .badge-closed, html[data-theme="dark"] .badge-draft,
+html[data-theme="dark"] .badge-teacher {
+  color: var(--text-muted);
+  background: var(--surface-2);
+}
+
+/* ============================================================
+   6. TOASTS — default text colour on a light tint (tile pattern)
+   ============================================================ */
+
+.toast {
+  pointer-events: auto;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow);
+  padding: var(--space-3) var(--space-4);
+  font-size: .95rem;
+  font-weight: 500;
+  /* opacity/transform/transition stay legacy: JS animates .show */
+}
+.toast-info {
+  border-color: var(--accent);
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+.toast-ok {
+  border-color: var(--success);
+  color: var(--text);
+  background: color-mix(in srgb, var(--success) 8%, var(--surface));
+}
+.toast-error {
+  border-color: var(--danger);
+  color: var(--text);
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+}
+.toast-warn {
+  border-color: var(--warning);
+  color: var(--text);
+  background: color-mix(in srgb, var(--warning) 8%, var(--surface));
+}
+
+/* ============================================================
+   7. MODAL DIALOG — flat panel, plain scrim (no backdrop blur)
+   ============================================================ */
+
+.modal {
+  border: none;
+  padding: 0;
+  max-width: min(440px, calc(100vw - 32px)); /* never wider than the viewport */
+  background: transparent;
+  box-shadow: none;
+  border-radius: var(--radius-card);
+}
+.modal::backdrop {
+  background: rgba(16, 24, 40, .55);  /* neutral scrim, same family as --shadow */
+  backdrop-filter: none;              /* legacy blur(6px) removed */
+}
+.modal-content {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-5);
+  box-shadow: var(--shadow);
+}
+.modal-backdrop { display: none; } /* ::backdrop handles it */
+.modal h3 { margin: 0 0 var(--space-2); font-size: 1.1rem; font-weight: 650; }
+.modal p  { margin: 0 0 var(--space-5); color: var(--text-muted); font-size: .95rem; }
+.modal-actions { display: flex; justify-content: flex-end; gap: var(--space-3); }
+
+/* ============================================================
+   8. SHARED EXTRAS
+   ============================================================ */
+
+/* Transient highlight (exam.js adds this class briefly) — accent, not purple */
+.flash-highlight {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-card);
+}

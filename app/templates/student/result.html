@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Result · {{ attempt.exam.title }}{% endblock %}
+
+{% block content %}
+<div class="result-hero card">
+  <div>
+    <h1>{{ attempt.exam.title }}</h1>
+    <p class="muted">
+      Submitted {{ attempt.submitted_at|dt }}
+      {% if attempt.attempt_no > 1 %}· attempt {{ attempt.attempt_no }}{% endif %}
+      {% if attempt.submitted_by == 'teacher' %}· (ended by teacher){% endif %}
+    </p>
+    {% if passed == true %}
+      <span class="badge badge-open">✅ Passed ({{ attempt.exam.pass_mark }}% needed)</span>
+    {% elif passed == false %}
+      <span class="badge badge-risk-high">❌ Did not pass ({{ attempt.exam.pass_mark }}% needed)</span>
+    {% endif %}
+  </div>
+  {% if show_score %}
+  <div class="score-ring">
+    {% if percent is not none %}
+      <span class="score-value">{{ percent|pct }}%</span>
+    {% else %}
+      <span class="score-value">—</span>
+    {% endif %}
+    <span class="score-raw">{{ attempt.score|marks }}/{{ attempt.total|marks }}</span>
+  </div>
+  {% else %}
+  <div class="score-ring">
+    <span class="score-value">🔒</span>
+    <span class="score-raw">Result not published yet</span>
+  </div>
+  {% endif %}
+</div>
+
+{% if violations %}
+<div class="flash flash-error">
+  {{ violations|length }} violation(s) recorded during this attempt:
+  {{ violations|join(', ') }}. Your teacher will review them.
+</div>
+{% else %}
+<div class="flash flash-ok">No violations recorded. 🎉</div>
+{% endif %}
+
+<div class="card">
+  <h2>Your answers</h2>
+  <ol class="answer-list">
+    {% for row in rows %}
+    {% set q = row.question %}
+    <li class="answer-item answer-{{ 'correct' if row.correct == true else ('wrong' if row.correct == false else 'blank') }}">
+      <div class="answer-head">
+        <span class="answer-mark">
+          {% if row.correct == true %}✔{% elif row.correct == false %}✘{% else %}…{% endif %}
+        </span>
+        <strong>{{ row.number }}. {{ q.text }}</strong>
+        <span class="badge">{{ q.points|marks }} pt</span>
+      </div>
+
+      {% if q.type in ('mcq', 'true_false') %}
+        {% if row.answer and row.answer.selected_index is not none %}
+          <p>Your answer: <strong>{{ q.options[row.answer.selected_index] }}</strong></p>
+        {% else %}
+          <p class="muted">Not answered</p>
+        {% endif %}
+        {% if row.correct == false and show_score %}
+          <p class="correct-answer">Correct: {{ q.options[q.correct_index] }}</p>
+        {% endif %}
+
+      {% elif q.type == 'multi' %}
+        {% if row.answer and row.answer.selected_indices %}
+          <p>Your answers:
+            {% for idx in row.answer.selected_indices %}<strong>{{ q.options[idx] }}</strong>{{ ', ' if not loop.last }}{% endfor %}
+          </p>
+        {% else %}
+          <p class="muted">Not answered</p>
+        {% endif %}
+        {% if row.correct == false and show_score %}
+          <p class="correct-answer">Correct:
+            {% for idx in q.correct_indices %}{{ q.options[idx] }}{{ ', ' if not loop.last }}{% endfor %}
+          </p>
+        {% endif %}
+
+      {% else %}
+        {% if row.answer and row.answer.response %}
+          <p class="typed-answer">{{ row.answer.response }}</p>
+        {% else %}
+          <p class="muted">Not answered</p>
+        {% endif %}
+        {% if row.pending %}
+          <p class="muted">⏳ This answer is waiting for review
+            (AI suggestion or teacher check) — the final marks count.</p>
+        {% elif row.grading and show_score %}
+          <p class="muted">Marked {{ row.grading.final_marks|marks }}/{{ q.points|marks }}
+            {% if row.grading.reason %}— {{ row.grading.reason }}{% endif %}
+          </p>
+        {% elif show_score and row.correct == false and q.model_answer %}
+          <p class="correct-answer">Model answer: {{ q.model_answer }}</p>
+        {% endif %}
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+</div>
+
+{% if upload_open %}
+<div class="card stack">
+  <h2>📄 Upload handwritten answers</h2>
+  <p class="muted">Upload photos (JPG/PNG — they are merged into one PDF) or a
+     single PDF within {{ attempt.exam.upload_window_minutes }} minutes of
+     submission. Files are SHA-256 hashed and checked for duplicates.</p>
+  <form method="post" enctype="multipart/form-data" class="stack"
+        action="{{ url_for('student.upload_answers', attempt_id=attempt.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>Files (PDF or images, max 10 MB each)
+      <input type="file" name="files" accept="application/pdf,image/*" multiple required>
+    </label>
+    <button class="btn btn-primary" type="submit">⬆ Upload</button>
+  </form>
+</div>
+{% elif attempt.exam.upload_window_minutes > 0 and attempt.submissions %}
+<div class="card">
+  <h2>📄 Uploaded answers</h2>
+  <ul class="meta-list">
+    {% for sub in attempt.submissions %}
+      <li>{{ sub.original_name }} — {{ sub.ocr_status|label }}
+        {% if sub.late %}<span class="badge badge-risk-medium">late</span>{% endif %}
+        {% if sub.duplicate_of %}<span class="badge badge-risk-high">duplicate</span>{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if notes %}
+<div class="card">
+  <h2>Your notes</h2>
+  <ul class="meta-list">
+    {% for note in notes %}
+      <li class="tmsg tmsg-{{ note.kind }}">{{ note.body }}
+        <span class="muted">— {{ note.created_at|dt }}</span></li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="card stack">
+  <h2>Explain a violation or ask for a re-check</h2>
+  <p class="muted">Your teacher reads every note. Use it to explain a warning
+     (for example a lost connection) or to request a re-check of your marks.</p>
+  <form method="post" class="form-row"
+        action="{{ url_for('student.add_note', attempt_id=attempt.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label class="grow">Your note
+      <input type="text" name="body" maxlength="2000" required
+             placeholder="Example: the Wi-Fi dropped around 14:20">
+    </label>
+    <button class="btn" type="submit">Send note</button>
+  </form>
+  {% if can_recheck %}
+  <form method="post" class="form-row"
+        action="{{ url_for('student.request_recheck', attempt_id=attempt.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label class="grow">Re-check request
+      <input type="text" name="body" maxlength="2000" required
+             placeholder="Example: please re-check question 5">
+    </label>
+    <button class="btn" type="submit">Request re-check</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="actions-row">
+  <a class="btn" href="{{ url_for('student.dashboard') }}">← Back to exams</a>
+  <a class="btn" href="{{ url_for('student.history') }}">Exam history</a>
+</div>
+{% endblock %}
